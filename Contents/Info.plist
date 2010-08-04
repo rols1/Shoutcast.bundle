@@ -20,5 +20,7 @@
     <string>1</string>
 		<key>PlexFrameworkVersion</key>
 		<string>1</string>
+		<key>PlexClientCapabilities</key>
+		<string>protocols=shoutcast</string>
   </dict>
 </plist>
