@@ -1,7 +1,4 @@
 import urllib
-from PMS import *
-from PMS.Objects import *
-from PMS.Shortcuts import *
 
 SC_ROOT     = 'http://www.shoutcast.com'
 SC_GENRE    = SC_ROOT + '/sbin/newxml.phtml'
@@ -28,12 +25,12 @@ def CreatePrefs():
 ####################################################################################################
 def CreateDict():
   # Create dict objects
-  Dict.Set("genres", {})
-  Dict.Set("sortedGenres", [])
+  Dict["genres"] = {}
+  Dict["sortedGenres"] = []
 
 ####################################################################################################
 def UpdateCache():
-  page = XML.ElementFromURL(SC_GENREJSP, isHTML=True)
+  page = HTML.ElementFromURL(SC_GENREJSP)
   genres = {}
   for g in page.xpath("//a[@class='rdropPriFont']"):
     genre = g.text
@@ -42,8 +39,8 @@ def UpdateCache():
       subgenres.append(sg.text)
     genres[genre] = subgenres
 
-  Dict.Set("genres", genres)
-  Dict.Set("sortedGenres", sorted(genres.keys()))
+  Dict["genres"] = genres
+  Dict["sortedGenres"] = sorted(genres.keys())
   
 ####################################################################################################
 def MainMenu():
@@ -57,7 +54,7 @@ def MainMenu():
 ####################################################################################################
 def GetGenres(sender):
   dir = MediaContainer(title2=sender.itemTitle)
-  sortedGenres = Dict.Get("sortedGenres")
+  sortedGenres = Dict["sortedGenres"]
   for genre in sortedGenres:
     dir.Append(Function(DirectoryItem(GetSubGenres, title=genre)))
   return dir
@@ -66,7 +63,7 @@ def GetGenres(sender):
 def GetSubGenres(sender):
   dir = MediaContainer(title2=sender.itemTitle)
   dir.Append(Function(DirectoryItem(GetGenre, title="All " + sender.itemTitle + " Stations"), query=sender.itemTitle))
-  genres = Dict.Get("genres")
+  genres = Dict["genres"]
   for subGenre in genres[sender.itemTitle]:
     dir.Append(Function(DirectoryItem(GetGenre, title=subGenre)))
   return dir
