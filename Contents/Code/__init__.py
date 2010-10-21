@@ -1,26 +1,26 @@
 import urllib
 
-SC_ROOT     = 'http://www.shoutcast.com'
-SC_GENRE    = SC_ROOT + '/sbin/newxml.phtml'
-SC_GENREJSP = 'http://www.shoutcast.com/cusGenre.jsp'
-SC_PREFIX   = '/music/shoutcast'
-
-CACHE_INTERVAL = 3600*5
+PREFIX           = '/music/shoutcast'
+SC_DEVID         = 'sh1t7hyn3Kh0jhlV'
+SC_ROOT          = 'http://api.shoutcast.com/'
+SC_SEARCH        = SC_ROOT + 'legacy/stationsearch?k=' + SC_DEVID + '&search=%s'
+SC_BYGENRE       = SC_ROOT + 'legacy/genresearch?k=' + SC_DEVID + '&genre=%s'
+SC_NOWPLAYING    = SC_ROOT + 'station/nowplaying?k=' + SC_DEVID + '&ct=%s&f=xml'
+SC_TOP500        = SC_ROOT + 'legacy/Top500?%sk=' + SC_DEVID
+SC_ALLGENRES     = SC_ROOT + 'legacy/genrelist?k=' + SC_DEVID
+SC_PRIMARYGENRES = SC_ROOT + 'genre/primary?k=' + SC_DEVID + '&f=xml'
+SC_SUBGENRES     = SC_ROOT + 'genre/secondary?parentid=%s&k=' + SC_DEVID + '&f=xml'
+SC_PLAY          = 'http://yp.shoutcast.com/sbin/tunein-station.pls?id=%s&k='+ SC_DEVID
 
 ####################################################################################################
 def Start():
-  Plugin.AddPrefixHandler(SC_PREFIX, MainMenu, 'SHOUTcast', 'icon-default.png', 'art-default.png')
+  Plugin.AddPrefixHandler(PREFIX, MainMenu, 'SHOUTcast', 'icon-default.png', 'art-default.png')
   Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
   MediaContainer.title1 = 'SHOUTcast'
   MediaContainer.content = 'Items'
   MediaContainer.art = R('art-default.png')
   DirectoryItem.thumb = R("icon-default.png")
-  HTTP.SetCacheTime(CACHE_INTERVAL)
-
-####################################################################################################
-def CreatePrefs():
-  Prefs.Add(id='min-bitrate', type='enum', default='(None)', label='Minimum Bitrate', values='(None)|64 kbps|96 kbps|128 kbps|192 kbps|256 kbps|320 kbps')
-  Prefs.Add(id='sort-key',    type='enum', default='Station Name', label='Sort Order', values='Station Name|Bitrate|Listeners')
+  HTTP.CacheTime = 3600*5 
 
 ####################################################################################################
 def CreateDict():
@@ -30,15 +30,14 @@ def CreateDict():
 
 ####################################################################################################
 def UpdateCache():
-  page = HTML.ElementFromURL(SC_GENREJSP)
   genres = {}
-  for g in page.xpath("//a[@class='rdropPriFont']"):
-    genre = g.text
+  for g in XML.ElementFromURL(SC_PRIMARYGENRES).xpath("//genre"):
+    genre = g.get('name')
     subgenres = []
-    for sg in g.xpath("following::div")[0].xpath("a"):
-      subgenres.append(sg.text)
+    if g.get('haschildren') == 'true':
+      for sg in XML.ElementFromURL(SC_SUBGENRES % g.get('parentid')).xpath("//genre/genrelist/genre"):
+        subgenres.append(sg.get('name'))
     genres[genre] = subgenres
-
   Dict["genres"] = genres
   Dict["sortedGenres"] = sorted(genres.keys())
   
@@ -47,12 +46,16 @@ def MainMenu():
   dir = MediaContainer()
   dir.Append(Function(DirectoryItem(GetGenres, L('By Genre'))))
   #dir.Append(Function(DirectoryItem(GetSubGenres, L('All Genres'))))
-  dir.Append(Function(SearchDirectoryItem(GetGenre, title=L("Search for Stations..."), prompt=L("Search for Stations"), thumb=R('search.png')), queryParamName='?search=%s'))
+  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R('search.png')), queryParamName=SC_SEARCH))
+  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"), thumb=R('search.png')), queryParamName=SC_NOWPLAYING))
+  dir.Append(Function(DirectoryItem(GetGenre, title=L("Top 500 Stations")), queryParamName=SC_TOP500, query='**ignore**'))
   dir.Append(PrefsItem(L("Preferences...")))
   return dir
   
 ####################################################################################################
 def GetGenres(sender):
+  if Dict["sortedGenres"] == None:
+    UpdateCache()
   dir = MediaContainer(title2=sender.itemTitle)
   sortedGenres = Dict["sortedGenres"]
   for genre in sortedGenres:
@@ -69,19 +72,21 @@ def GetSubGenres(sender):
   return dir
   
 ####################################################################################################
-def GetGenre(sender, queryParamName='?genre=%s', query=''):
+def GetGenre(sender, queryParamName=SC_BYGENRE, query=''):
   dir = MediaContainer(viewGroup='Details', title1='By Genre', title2=sender.itemTitle)
   if query == '':
     query = sender.itemTitle
+  elif query == '**ignore**':
+    query = ''
   else:
-    if len(query) < 3: #search doesn't work for short strings
+    if len(query) < 3 and queryParamName == SC_SEARCH: #search doesn't work for short strings
       return MessageContainer(header='Search error.', message='Searches must have a minimum of three characters.')
     dir.title1 = 'Search'
     dir.title2 = '"' + query + '"'
     
-  Log(urllib.quote(sender.itemTitle))
-  fullUrl = SC_GENRE + queryParamName % String.Quote(query, True)
-  Log("Full URL:"+fullUrl)
+  #Log(urllib.quote(sender.itemTitle))
+  fullUrl = queryParamName % String.Quote(query, True)
+  #Log("Full URL:"+fullUrl)
   xml = XML.ElementFromURL(fullUrl, cacheTime=1)
   root = xml.xpath('//tunein')[0].get('base')
   
@@ -95,7 +100,7 @@ def GetGenre(sender, queryParamName='?genre=%s', query=''):
     listeners = 0
     bitrate = int(station.get('br'))
     
-    key = SC_ROOT + root + '?id=' + station.get('id')
+    key = SC_PLAY % station.get('id')
     subtitle = station.get('ct')
     if station.get('lc'):
       if len(subtitle) > 0:
