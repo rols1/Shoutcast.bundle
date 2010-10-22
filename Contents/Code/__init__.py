@@ -46,10 +46,10 @@ def MainMenu():
   dir = MediaContainer()
   dir.Append(Function(DirectoryItem(GetGenres, L('By Genre'))))
   #dir.Append(Function(DirectoryItem(GetSubGenres, L('All Genres'))))
-  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R('search.png')), queryParamName=SC_SEARCH))
-  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"), thumb=R('search.png')), queryParamName=SC_NOWPLAYING))
+  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R('icon-search.png')), queryParamName=SC_SEARCH))
+  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"), thumb=R('icon-search.png')), queryParamName=SC_NOWPLAYING))
   dir.Append(Function(DirectoryItem(GetGenre, title=L("Top 500 Stations")), queryParamName=SC_TOP500, query='**ignore**'))
-  dir.Append(PrefsItem(L("Preferences...")))
+  dir.Append(PrefsItem(L("Preferences..."), thumb=R('icon-prefs.png')))
   return dir
   
 ####################################################################################################
@@ -68,7 +68,7 @@ def GetSubGenres(sender):
   dir.Append(Function(DirectoryItem(GetGenre, title="All " + sender.itemTitle + " Stations"), query=sender.itemTitle))
   genres = Dict["genres"]
   for subGenre in genres[sender.itemTitle]:
-    if XML.ElementFromURL(SC_BYGENRE % String.Quote(subGenre, True), cacheTime=1).xpath('//station') != []: #skip empty subgenres
+    if XML.ElementFromURL(SC_BYGENRE % String.Quote(subGenre, True), cacheTime=3600).xpath('//station') != []: #skip empty subgenres
       dir.Append(Function(DirectoryItem(GetGenre, title=subGenre)))
   return dir
   
