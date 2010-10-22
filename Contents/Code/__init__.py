@@ -20,7 +20,7 @@ def Start():
   MediaContainer.content = 'Items'
   MediaContainer.art = R('art-default.png')
   DirectoryItem.thumb = R("icon-default.png")
-  HTTP.CacheTime = 3600*5 
+  HTTP.CacheTime = 3600*5
 
 ####################################################################################################
 def CreateDict():
@@ -35,8 +35,8 @@ def UpdateCache():
     genre = g.get('name')
     subgenres = []
     if g.get('haschildren') == 'true':
-      for sg in XML.ElementFromURL(SC_SUBGENRES % g.get('parentid')).xpath("//genre/genrelist/genre"):
-        subgenres.append(sg.get('name'))
+      for sg in XML.ElementFromURL(SC_SUBGENRES % g.get('id')).xpath("//genre"):
+        subgenres.append(sg.get('name')) #  + ' [' +   + 'stations]')
     genres[genre] = subgenres
   Dict["genres"] = genres
   Dict["sortedGenres"] = sorted(genres.keys())
@@ -68,7 +68,8 @@ def GetSubGenres(sender):
   dir.Append(Function(DirectoryItem(GetGenre, title="All " + sender.itemTitle + " Stations"), query=sender.itemTitle))
   genres = Dict["genres"]
   for subGenre in genres[sender.itemTitle]:
-    dir.Append(Function(DirectoryItem(GetGenre, title=subGenre)))
+    if XML.ElementFromURL(SC_BYGENRE % String.Quote(subGenre, True), cacheTime=1).xpath('//station') != []: #skip empty subgenres
+      dir.Append(Function(DirectoryItem(GetGenre, title=subGenre)))
   return dir
   
 ####################################################################################################
