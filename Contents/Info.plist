@@ -25,6 +25,8 @@
 	</dict>
 	<key>PlexFrameworkVersion</key>
 	<string>2</string>
+	<key>PlexClientPlatforms</key>
+	<string>*</string>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
 </dict>
