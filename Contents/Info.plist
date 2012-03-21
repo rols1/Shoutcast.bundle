@@ -23,10 +23,12 @@
 			<string>shoutcast</string>
 		</array>
 	</dict>
-	<key>PlexFrameworkVersion</key>
-	<string>2</string>
+	<key>PlexClientPlatformExclusions</key>
+	<string>Roku</string>
 	<key>PlexClientPlatforms</key>
 	<string>*</string>
+	<key>PlexFrameworkVersion</key>
+	<string>2</string>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
 </dict>
