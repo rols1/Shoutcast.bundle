@@ -1,6 +1,5 @@
-import urllib
+RE_FILE = Regex('File1=(http.+?)\n')
 
-PREFIX           = '/music/shoutcast'
 SC_DEVID         = 'sh1t7hyn3Kh0jhlV'
 SC_ROOT          = 'http://api.shoutcast.com/'
 SC_SEARCH        = SC_ROOT + 'legacy/stationsearch?k=' + SC_DEVID + '&search=%s'
@@ -14,12 +13,10 @@ SC_PLAY          = 'http://yp.shoutcast.com/sbin/tunein-station.pls?id=%s&k='+ S
 
 ####################################################################################################
 def Start():
-  Plugin.AddPrefixHandler(PREFIX, MainMenu, 'SHOUTcast', 'icon-default.png', 'art-default.png')
-  Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
-  MediaContainer.title1 = 'SHOUTcast'
-  MediaContainer.content = 'Items'
-  MediaContainer.art = R('art-default.png')
-  DirectoryItem.thumb = R("icon-default.png")
+  ObjectContainer.title1 = "SHOUTcast"
+  ObjectContainer.art = R('art-default.png')
+  DirectoryObject.thumb = R("icon-default.png")
+  TrackObject.thumb = R('icon-default.png')
   HTTP.CacheTime = 3600*5
 
 ####################################################################################################
@@ -36,92 +33,141 @@ def UpdateCache():
     subgenres = []
     if g.get('haschildren') == 'true':
       for sg in XML.ElementFromURL(SC_SUBGENRES % g.get('id')).xpath("//genre"):
-        subgenres.append(sg.get('name')) #  + ' [' +   + 'stations]')
+        subgenres.append(sg.get('name'))
     genres[genre] = subgenres
   Dict["genres"] = genres
   Dict["sortedGenres"] = sorted(genres.keys())
   
 ####################################################################################################
+@handler("/music/shoutcast", "SHOUTcast", 'icon-default.png', 'art-default.png')
 def MainMenu():
-  dir = MediaContainer()
-  dir.Append(Function(DirectoryItem(GetGenres, L('By Genre'))))
-  #dir.Append(Function(DirectoryItem(GetSubGenres, L('All Genres'))))
-  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R('icon-search.png')), queryParamName=SC_SEARCH))
-  dir.Append(Function(InputDirectoryItem(GetGenre, title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"), thumb=R('icon-search.png')), queryParamName=SC_NOWPLAYING))
-  dir.Append(Function(DirectoryItem(GetGenre, title=L("Top 500 Stations")), queryParamName=SC_TOP500, query='**ignore**'))
-  dir.Append(PrefsItem(L("Preferences..."), thumb=R('icon-prefs.png')))
-  return dir
+  oc = ObjectContainer()
+  oc.add(DirectoryObject(key=Callback(GetGenres), title=L('By Genre')))
+  oc.add(InputDirectoryObject(key=Callback(GetGenre, title="", queryParamName=SC_SEARCH), title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R('icon-search.png')))
+  oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Now Playing", queryParamName=SC_NOWPLAYING), title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"), thumb=R('icon-search.png')))
+  oc.add(DirectoryObject(key=Callback(GetGenre, title=L("Top 500 Stations"), queryParamName=SC_TOP500, query='**ignore**'), title=L("Top 500 Stations")))
+  oc.add(PrefsObject(title=L("Preferences..."), thumb=R('icon-prefs.png')))
+  return oc
   
 ####################################################################################################
-def GetGenres(sender):
+@route("/music/shoutcast/genres")
+def GetGenres():
   if Dict["sortedGenres"] == None:
     UpdateCache()
-  dir = MediaContainer(title2=sender.itemTitle)
+  
+  oc = ObjectContainer(title2=L('By Genre'))
+  
   sortedGenres = Dict["sortedGenres"]
   for genre in sortedGenres:
-    dir.Append(Function(DirectoryItem(GetSubGenres, title=genre)))
-  return dir
+    oc.add(DirectoryObject(key=Callback(GetSubGenres, genre=genre), title=genre))
+  return oc
   
 ####################################################################################################
-def GetSubGenres(sender):
-  dir = MediaContainer(title2=sender.itemTitle)
-  dir.Append(Function(DirectoryItem(GetGenre, title="All " + sender.itemTitle + " Stations"), query=sender.itemTitle))
+@route("/music/shoutcast/subgenres")
+def GetSubGenres(genre):
+  oc = ObjectContainer(title2=genre)
+  oc.add(DirectoryObject(key=Callback(GetGenre, title=genre, query=genre), title="All %s Stations" % genre))
   genres = Dict["genres"]
-  for subGenre in genres[sender.itemTitle]:
+  for subGenre in genres[genre]:
     if XML.ElementFromURL(SC_BYGENRE % String.Quote(subGenre, True), cacheTime=3600).xpath('//station') != []: #skip empty subgenres
-      dir.Append(Function(DirectoryItem(GetGenre, title=subGenre)))
-  return dir
+      oc.add(DirectoryObject(key=Callback(GetGenre, title=subGenre), title=subGenre))
+  
+  return oc
   
 ####################################################################################################
-def GetGenre(sender, queryParamName=SC_BYGENRE, query=''):
-  dir = MediaContainer(viewGroup='Details', title1='By Genre', title2=sender.itemTitle)
+@route("/music/shoutcast/genre")
+def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
+  if title == '' and query != '' and query != '**ignore**':
+    title = query
+  
+  oc = ObjectContainer(title1='By Genre', title2=title)
+  
   if query == '':
-    query = sender.itemTitle
+    query = title
   elif query == '**ignore**':
     query = ''
   else:
     if len(query) < 3 and queryParamName == SC_SEARCH: #search doesn't work for short strings
-      return MessageContainer(header='Search error.', message='Searches must have a minimum of three characters.')
-    dir.title1 = 'Search'
-    dir.title2 = '"' + query + '"'
+      return ObjectContainer(header='Search error.', message='Searches must have a minimum of three characters.')
+    oc.title1 = 'Search'
+    oc.title2 = '"' + query + '"'
     
-  #Log(urllib.quote(sender.itemTitle))
   fullUrl = queryParamName % String.Quote(query, True)
-  #Log("Full URL:"+fullUrl)
   xml = XML.ElementFromURL(fullUrl, cacheTime=1)
   root = xml.xpath('//tunein')[0].get('base')
   
-  min_bitrate = Prefs.Get('min-bitrate')
+  min_bitrate = Prefs['min-bitrate']
   if min_bitrate[0] == '(':
     min_bitrate = 0
   else:
     min_bitrate = int(min_bitrate.split()[0])
   
-  for station in xml.xpath('//station'):
+  stations = xml.xpath('//station')
+  # Sort.
+  if Prefs['sort-key'] == 'Bitrate':
+    stations.sort(key = lambda station: station.get('br'), reverse=True)
+  elif Prefs['sort-key'] == 'Listeners':
+    stations.sort(key = lambda station: station.get('lc'), reverse=True)
+  else:
+    stations.sort(key = lambda station: station.get('name'), reverse=False)
+    
+  for station in stations:
     listeners = 0
     bitrate = int(station.get('br'))
     
-    key = SC_PLAY % station.get('id')
-    subtitle = station.get('ct')
+    url = SC_PLAY % station.get('id')
+    title = station.get('name').strip(' - a SHOUTcast.com member station')
+    summary = station.get('ct')
+    if station.get('mt') == "audio/mpeg":
+      fmt = 'mp3'
+    elif station.get('mt') == "audio/aacp":
+      fmt = 'aac'
+    else:
+      fmt = 'unknown'
+    
     if station.get('lc'):
-      if len(subtitle) > 0:
-        subtitle += "\n"
+      if len(summary) > 0:
+        summary += "\n"
       listeners = int(station.get('lc'))
       if listeners > 0:
-        subtitle += station.get('lc')+' Listeners'
+        summary += station.get('lc')+' Listeners'
     
     # Filter.
     if bitrate >= min_bitrate:
-      dir.Append(TrackItem(key, station.get('name'), subtitle=subtitle, bitrate=bitrate, listeners=listeners, thumb=R('icon-default.png')))
-
-  # Sort.
-  if Prefs.Get('sort-key') == 'Bitrate':
-    dir.Sort('bitrate')
-    dir.Reverse()
-  elif Prefs.Get('sort-key') == 'Listeners':
-    dir.Sort('listeners')
-    dir.Reverse()
+      oc.add(TrackObject(key=Callback(Lookup, url=url, title=title, summary=summary, listeners=listeners, bitrate=bitrate, fmt=fmt),
+        rating_key=url,
+        title=title,
+        summary=summary,
+        items=[MediaObject(
+            parts = [PartObject(key=Callback(PlayAudio, url=url, ext=fmt))],
+            bitrate = bitrate,
+          )]))
       
-  return dir
+  # Sort.
+  #if Prefs['sort-key'] == 'Bitrate':
+  #  oc.objects.sort(key = lambda obj: obj.bitrate, reverse=True)
+    #dir.Sort('bitrate')
+    #dir.Reverse()
+  #elif Prefs['sort-key'] == 'Listeners':
+  #  oc.objects.sort(key = lambda obj: obj.listeners, reverse=True)
+    #dir.Sort('listeners')
+    #dir.Reverse()
+ 
+  return oc
   
 ####################################################################################################
+def Lookup(url, title, summary, listeners, bitrate, fmt):
+  return TrackObject(key=Callback(Lookup, url=url, title=title, summary=summary, listeners=listeners, bitrate=bitrate, fmt=fmt),
+            rating_key=url,
+            title=title,
+            summary=summary,
+            items=[MediaObject(
+              parts = [PartObject(key=Callback(PlayAudio, url=url, ext=fmt))],
+              bitrate = bitrate,
+              )])
+
+####################################################################################################
+def PlayAudio(url):
+  content = HTTP.Request(url).content
+  file_url = RE_FILE.search(content).group(1)
+  return Redirect(file_url)
