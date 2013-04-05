@@ -120,8 +120,10 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
     summary = station.get('ct')
     if station.get('mt') == "audio/mpeg":
       fmt = 'mp3'
+      codec = AudioCodec.MP3
     elif station.get('mt') == "audio/aacp":
       fmt = 'aac'
+      codec = AudioCodec.AAC
     else:
       fmt = 'unknown'
     
@@ -133,40 +135,54 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
         summary += station.get('lc')+' Listeners'
     
     # Filter.
+  
     if bitrate >= min_bitrate:
-      oc.add(TrackObject(key=Callback(Lookup, url=url, title=title, summary=summary, listeners=listeners, bitrate=bitrate, fmt=fmt),
-        rating_key=url,
-        title=title,
-        summary=summary,
-        items=[MediaObject(
-            parts = [PartObject(key=Callback(PlayAudio, url=url, ext=fmt))],
-            bitrate = bitrate,
-          )]))
+      oc.add(
+        TrackObject(
+          key=Callback(Lookup, url=url, title=title, summary=summary, bitrate=bitrate, fmt=fmt, codec=codec),
+          rating_key=url,
+          title=title,
+          summary=summary,
+          items=[
+            MediaObject(
+              parts = [
+                PartObject(key=Callback(PlayAudio, url=url, ext=fmt))
+                ],
+              audio_codec = codec,
+              container = fmt,
+              audio_channels = 2,
+              bitrate = bitrate
+            )
+          ]
+        )
+      )
       
-  # Sort.
-  #if Prefs['sort-key'] == 'Bitrate':
-  #  oc.objects.sort(key = lambda obj: obj.bitrate, reverse=True)
-    #dir.Sort('bitrate')
-    #dir.Reverse()
-  #elif Prefs['sort-key'] == 'Listeners':
-  #  oc.objects.sort(key = lambda obj: obj.listeners, reverse=True)
-    #dir.Sort('listeners')
-    #dir.Reverse()
- 
+
   return oc
   
 ####################################################################################################
-def Lookup(url, title, summary, listeners, bitrate, fmt):
-  return TrackObject(key=Callback(Lookup, url=url, title=title, summary=summary, listeners=listeners, bitrate=bitrate, fmt=fmt),
+@route("/music/shoutcast/lookup")
+def Lookup(url, title, summary, bitrate, fmt, codec):
+  return TrackObject(
+            key=Callback(Lookup, url=url, title=title, summary=summary, bitrate=bitrate, fmt=fmt, codec=codec),
             rating_key=url,
             title=title,
             summary=summary,
-            items=[MediaObject(
-              parts = [PartObject(key=Callback(PlayAudio, url=url, ext=fmt))],
-              bitrate = bitrate,
-              )])
+            items=[
+              MediaObject(
+                parts = [
+                  PartObject(key=Callback(PlayAudio, url=url, ext=fmt))
+                  ],
+                audio_codec = codec,
+                container = fmt,
+                audio_channels = 2,
+                bitrate = bitrate
+              )
+            ]
+          )
 
 ####################################################################################################
+@route("/music/shoutcast/playaudio")
 def PlayAudio(url):
   content = HTTP.Request(url).content
   file_url = RE_FILE.search(content).group(1)
