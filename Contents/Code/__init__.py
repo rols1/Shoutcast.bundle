@@ -14,9 +14,6 @@ SC_PLAY          = 'http://yp.shoutcast.com/sbin/tunein-station.pls?id=%s&k='+ S
 ####################################################################################################
 def Start():
   ObjectContainer.title1 = "SHOUTcast"
-  ObjectContainer.art = R('art-default.png')
-  DirectoryObject.thumb = R("icon-default.png")
-  TrackObject.thumb = R('icon-default.png')
   HTTP.CacheTime = 3600*5
 
 ####################################################################################################
@@ -39,14 +36,14 @@ def UpdateCache():
   Dict["sortedGenres"] = sorted(genres.keys())
   
 ####################################################################################################
-@handler("/music/shoutcast", "SHOUTcast", 'icon-default.png', 'art-default.png')
+@handler("/music/shoutcast", "SHOUTcast")
 def MainMenu():
   oc = ObjectContainer()
   oc.add(DirectoryObject(key=Callback(GetGenres), title=L('By Genre')))
-  oc.add(InputDirectoryObject(key=Callback(GetGenre, title="", queryParamName=SC_SEARCH), title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R('icon-search.png')))
-  oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Now Playing", queryParamName=SC_NOWPLAYING), title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"), thumb=R('icon-search.png')))
+  oc.add(InputDirectoryObject(key=Callback(GetGenre, title="", queryParamName=SC_SEARCH), title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations")))
+  oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Now Playing", queryParamName=SC_NOWPLAYING), title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing")))
   oc.add(DirectoryObject(key=Callback(GetGenre, title=L("Top 500 Stations"), queryParamName=SC_TOP500, query='**ignore**'), title=L("Top 500 Stations")))
-  oc.add(PrefsObject(title=L("Preferences..."), thumb=R('icon-prefs.png')))
+  oc.add(PrefsObject(title=L("Preferences...")))
   return oc
   
 ####################################################################################################
