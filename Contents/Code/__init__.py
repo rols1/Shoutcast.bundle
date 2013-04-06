@@ -116,7 +116,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
     bitrate = int(station.get('br'))
     
     url = SC_PLAY % station.get('id')
-    title = station.get('name').strip(' - a SHOUTcast.com member station')
+    title = station.get('name').split(' - a SHOUTcast.com member station')[0]
     summary = station.get('ct')
     if station.get('mt') == "audio/mpeg":
       fmt = 'mp3'
