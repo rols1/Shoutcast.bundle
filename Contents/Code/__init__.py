@@ -141,7 +141,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
           summary=summary,
           items=[
             MediaObject(
-              parts = [PartObject(key=Callback(PlayAudio, url=url, extension=fmt))],
+              parts = [PartObject(key=Callback(PlayAudio, url=url, extension=fmt, ext=fmt))],
               audio_codec = codec,
               container = fmt,
               audio_channels = 2,
@@ -157,13 +157,13 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 @route("/music/shoutcast/lookup")
 def Lookup(url, title, summary, bitrate, fmt, codec):
   return TrackObject(
-    key=Callback(Lookup, url=url, title=title, summary=summary, bitrate=bitrate, fmt=fmt, codec=codec, extension=fmt),
+    key=Callback(Lookup, url=url, title=title, summary=summary, bitrate=bitrate, fmt=fmt, codec=codec),
     rating_key=url,
     title=title,
     summary=summary,
     items=[
       MediaObject(
-        parts = [PartObject(key=Callback(PlayAudio, url=url, extension=fmt))],
+        parts = [PartObject(key=Callback(PlayAudio, url=url, extension=fmt, ext=fmt))],
         audio_codec = codec,
         container = fmt,
         audio_channels = 2,
@@ -173,9 +173,8 @@ def Lookup(url, title, summary, bitrate, fmt, codec):
     )
 
 ####################################################################################################
-@route("/music/shoutcast/playaudio.{extension}")
+@route("/music/shoutcast/playaudio.{extenstion}")
 def PlayAudio(url, extension):
-
-	content = HTTP.Request(url).content
-	file_url = RE_FILE.search(content).group(1)
-	return Redirect(file_url)
+  content = HTTP.Request(url).content
+  file_url = RE_FILE.search(content).group(1)
+  return Redirect(file_url)
