@@ -1,4 +1,4 @@
-RE_FILE = Regex('File1=(http.+?)\n')
+RE_FILE = Regex('File1=(https?://.+)')
 
 SC_DEVID         = 'sh1t7hyn3Kh0jhlV'
 SC_ROOT          = 'http://api.shoutcast.com/'
@@ -173,9 +173,9 @@ def Lookup(url, title, summary, bitrate, fmt, codec):
     )
 
 ####################################################################################################
-@route("/music/shoutcast/playaudio.{extenstion}")
+@route("/music/shoutcast/playaudio.{extension}")
 def PlayAudio(url, extension):
-  content = HTTP.Request(url).content
-  file_url = RE_FILE.search(content).group(1)
-  return Redirect(file_url)
-  
+
+	content = HTTP.Request(url).content
+	file_url = RE_FILE.search(content).group(1)
+	return Redirect(file_url)
