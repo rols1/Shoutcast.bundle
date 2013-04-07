@@ -173,7 +173,7 @@ def Lookup(url, title, summary, bitrate, fmt, codec):
     )
 
 ####################################################################################################
-@route("/music/shoutcast/playaudio.{extenstion}")
+@route("/music/shoutcast/playaudio.{extension}")
 def PlayAudio(url, extension):
   content = HTTP.Request(url).content
   file_url = RE_FILE.search(content).group(1)
