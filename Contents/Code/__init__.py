@@ -122,7 +122,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
       fmt = 'aac'
       codec = AudioCodec.AAC
     else:
-      fmt = 'unknown'
+      continue
     
     if station.get('lc'):
       if len(summary) > 0:
@@ -141,7 +141,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
           summary=summary,
           items=[
             MediaObject(
-              parts = [PartObject(key=Callback(PlayAudio, url=url, extension=fmt, ext=fmt))],
+              parts = [PartObject(key=Callback(PlayAudio, url=url, ext=fmt))],
               audio_codec = codec,
               container = fmt,
               audio_channels = 2,
@@ -163,7 +163,7 @@ def Lookup(url, title, summary, bitrate, fmt, codec):
     summary=summary,
     items=[
       MediaObject(
-        parts = [PartObject(key=Callback(PlayAudio, url=url, extension=fmt, ext=fmt))],
+        parts = [PartObject(key=Callback(PlayAudio, url=url, ext=fmt))],
         audio_codec = codec,
         container = fmt,
         audio_channels = 2,
@@ -173,8 +173,7 @@ def Lookup(url, title, summary, bitrate, fmt, codec):
     )
 
 ####################################################################################################
-@route("/music/shoutcast/playaudio.{extension}")
-def PlayAudio(url, extension):
+def PlayAudio(url):
   content = HTTP.Request(url).content
   file_url = RE_FILE.search(content).group(1)
   return Redirect(file_url)
