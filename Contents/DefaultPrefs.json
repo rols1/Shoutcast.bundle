@@ -1,17 +1,28 @@
 [
-  {
-    "id"        : "min-bitrate",
-    "type"      : "enum",
-    "default"   : "(None)",
-    "label"     : "Minimum Bitrate",
-    "values"    : ["(None)","64 kbps","96 kbps","128 kbps","192 kbps","256 kbps","320 kbps"]
-  },
-  
-  {
-    "id"        : "sort-key",
-    "type"      : "enum",
-    "default"   : "Station Name",
-    "label"     : "Sort Order",
-    "values"    : ["Station Name","Bitrate","Listeners"]
-  }
+	{
+		"id": "min-bitrate",
+		"type": "enum",
+		"default": "(None)",
+		"label": "Minimum Bitrate",
+		"values": [
+			"(None)",
+			"64 kbps",
+			"96 kbps",
+			"128 kbps",
+			"192 kbps",
+			"256 kbps",
+			"320 kbps"
+		]
+	},
+	{
+		"id": "sort-key",
+		"type": "enum",
+		"default": "Station Name",
+		"label": "Sort Order",
+		"values": [
+			"Station Name",
+			"Bitrate",
+			"Listeners"
+		]
+	}
 ]
