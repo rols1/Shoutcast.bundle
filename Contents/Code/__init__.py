@@ -174,7 +174,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 def CreateTrackObject(url, title, summary, fmt, include_container=False):
 
 	if fmt == 'mp3':
-		container = 'mp3'
+		container = Container.MP3
 		audio_codec = AudioCodec.MP3
 	elif fmt == 'aac':
 		container = Container.MP4
@@ -192,6 +192,7 @@ def CreateTrackObject(url, title, summary, fmt, include_container=False):
 				],
 				container = container,
 				audio_codec = audio_codec,
+				bitrate = 192,
 				audio_channels = 2
 			)
 		]
@@ -209,6 +210,11 @@ def PlayAudio(url):
 	file_url = RE_FILE.search(content)
 
 	if file_url:
-		return Redirect(file_url.group(1))
+		stream_url = file_url.group(1)
+		if stream_url[-1] == '/':
+			stream_url += ';'
+		else:
+			stream_url += '/;'
+		return Redirect(stream_url)
 	else:
 		raise Ex.MediaNotAvailable
