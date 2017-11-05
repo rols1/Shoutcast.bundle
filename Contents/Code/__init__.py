@@ -171,7 +171,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 
 ####################################################################################################
 @route("/music/shoutcast/track")
-def CreateTrackObject(url, title, summary, fmt, include_container=False):
+def CreateTrackObject(url, title, summary, fmt, include_container=False, **kwargs):
 
 	if fmt == 'mp3':
 		container = Container.MP3
