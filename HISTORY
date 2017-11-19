@@ -2,11 +2,11 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Releases: 	
 --------------	
 
-19.11.2017	0.1.4	Icon ergänzt, Sender-Logo hinzugefügt (Alt.: ICON)	
+19.11.2017	0.1.4	Icon ergänzt, Sender-Logo hinzugefügt (Alt.: ICON), Git-Repo aktualisiert, 1. Release.	
 18.11.2017	0.1.3	Updater-Funktionen hinzugefügt.
-17.11.2017	0.1.2	Umbenennung -> Shoutcast2017 + Init Git-Repo, Anpassungen Plugin		
-16.11.2017	0.1.1	Änderungen: Debugging-Variablen in MainMenu, CreateTrackObject (**kwargs), 
-			zusätzl. Navigationsebene vor CreateTrackObject (StationCheck),
+17.11.2017	0.1.2	Umbenennung -> Shoutcast2017 + Init Git-Repo, Anpassungen Plugin.		
+16.11.2017	0.1.1	Änderungen: Debugging-Variablen in MainMenu, CreateTrackObject (**kwargs). 
+			zusätzl. Navigationsebene vor CreateTrackObject (StationCheck).
 			Einbau der getStreamMeta-Funktionen aus TuneIn2017, Home-Funktion für
 			die einzelnen Menü-Ebenen.	
 05.11.2017	0.1.0	Pluginstart: Fork von https://github.com/mikedm139/Shoutcast.bundle.

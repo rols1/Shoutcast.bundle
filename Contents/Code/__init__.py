@@ -4,11 +4,12 @@ import updater
 
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 
-VERSION =  '0.1.1'		
+VERSION =  '0.1.4'		
 VDATE = '19.11.2017'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
+ICON_OK					= 'icon-ok.png'
 
 ART    		= 'art-default.jpg'		# Quelle: https://de.wikipedia.org/w/index.php?curid=4483484
 ICON   		= 'icon-default.jpg'	# wie oben, Symbol ohne Schriftzug,  angepasst auf 512x512px
@@ -559,8 +560,8 @@ def SearchUpdate(title, start, oc=None):
 				return oc
 														# Menü Plugin-Update zeigen														
 		title = 'Plugin-Update | Version: ' + VERSION + ' - ' + VDATE 	 
-		summary=L('Suche nach neuen Updates starten')
-		tagline=L('Bezugsquelle') + ': ' + REPO_URL			
+		summary=L('Start searching for new Updates')
+		tagline=L('source of supply') + ': ' + REPO_URL			
 		oc.add(DirectoryObject(key=Callback(SearchUpdate, title='Plugin-Update', start='false'), 
 			title=title, summary=summary, tagline=tagline, thumb=R(ICON_MAIN_UPDATER)))
 		return oc
@@ -570,7 +571,7 @@ def SearchUpdate(title, start, oc=None):
 		oc,available = presentUpdate(oc,start)
 		if available == 'no_connect':
 			msgH = L('Fehler'); 
-			msg = L('Github ist nicht errreichbar') 		
+			msg = L('Github is not available') 		
 			return ObjectContainer(header=msgH, message=msg)
 		else:
 			return oc	
@@ -603,12 +604,12 @@ def presentUpdate(oc,start):
 			title=title, summary=summary, tagline=tag, thumb=R(ICON_UPDATER_NEW)))
 			
 		if start == 'false':						# Option Abbrechen nicht beim Start zeigen
-			oc.add(DirectoryObject(key = Callback(Main), title = L('Cancel Update'),
+			oc.add(DirectoryObject(key = Callback(MainMenu), title = L('Cancel Update'),
 				summary = L('continue with present Plugin'), thumb = R(ICON_UPDATER_NEW)))
 	else:											# Plugin aktuell -> Main
 		available = 'false'
 		if start == 'false':						# beim Start unterdrücken
-			oc.add(DirectoryObject(key = Callback(Main), 	
+			oc.add(DirectoryObject(key = Callback(MainMenu), 	
 				title = 'Plugin up to date | Home',
 				summary = 'Plugin Version ' + VERSION + ' ' + L('is the latest version'),
 				tagline = tag, thumb = R(ICON_OK)))			
