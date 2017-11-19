@@ -24,5 +24,11 @@
 			"Bitrate",
 			"Listeners"
 		]
+	},
+	{	
+		"id": "InfoUpdate",
+		"label": "look for update at plugin-start",
+		"type": "bool",
+		"default": "true"
 	}
 ]
