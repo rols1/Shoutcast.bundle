@@ -14,7 +14,7 @@ INSTALLATION:
 * via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle) or manually follow the directions below.
 * Download the zip-File from the [release-Link](https://github.com/rols1/TuneIn2017/releases), unzip it and copy the bundle into the Plug-Ins folder on the computer running Plex Media Server.
 * Restart Plex Media Server
-* [Plug-Ins-Verzeichnis](https://support.plex.tv/hc/en-us/articles/201106098) / [How do I find the Plug-Ins folder?](https://support.plex.tv/hc/en-us/articles/201106098)
+* [Plug-Ins-Folder](https://support.plex.tv/hc/en-us/articles/201106098) / [How do I find the Plug-Ins folder?](https://support.plex.tv/hc/en-us/articles/201106098)
 
 UPDATES:
 ===================  
