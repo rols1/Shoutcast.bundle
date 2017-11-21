@@ -2,6 +2,9 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Releases: 	
 --------------	
 
+
+21.11.2017	0.1.5	StationCheck: Auswertung aller Streamlinks in einer Playlist (nicht nur die erste). 
+			StationCheck: stream_url in summary ergänzt.
 19.11.2017	0.1.4	Icon ergänzt, Sender-Logo hinzugefügt (Alt.: ICON), Git-Repo aktualisiert, 1. Release.	
 18.11.2017	0.1.3	Updater-Funktionen hinzugefügt.
 17.11.2017	0.1.2	Umbenennung -> Shoutcast2017 + Init Git-Repo, Anpassungen Plugin.		

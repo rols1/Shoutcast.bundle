@@ -4,12 +4,13 @@ import updater
 
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 
-VERSION =  '0.1.4'		
-VDATE = '19.11.2017'
+VERSION =  '0.1.5'		
+VDATE = '21.11.2017'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
 ICON_OK					= 'icon-ok.png'
+ICON_SEARCH 			= 'suche.png'
 
 ART    		= 'art-default.jpg'		# Quelle: https://de.wikipedia.org/w/index.php?curid=4483484
 ICON   		= 'icon-default.jpg'	# wie oben, Symbol ohne Schriftzug,  angepasst auf 512x512px
@@ -91,12 +92,14 @@ def MainMenu():
 	Log('sort-key: ' + str(Prefs['sort-key']))
 
 	oc = ObjectContainer()
+	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Search for Stations", queryParamName=SC_SEARCH), title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"),
+		thumb=R(ICON_SEARCH)))
+	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Now Playing", queryParamName=SC_NOWPLAYING), title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"),
+		thumb=R(ICON_SEARCH)))
 	oc.add(DirectoryObject(key=Callback(GetGenres), title=L('By Genre')))
-	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="", queryParamName=SC_SEARCH), title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations")))
-	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Now Playing", queryParamName=SC_NOWPLAYING), title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing")))
 	oc.add(DirectoryObject(key=Callback(GetGenre, title=L("Top 500 Stations"), queryParamName=SC_TOP500, query='**ignore**'), title=L("Top 500 Stations")))
 	oc.add(PrefsObject(title=L("Preferences...")))
-	
+
 #-----------------------------	
 	oc = SearchUpdate(title=NAME, start='true', oc=oc)	# Updater-Modul einbinden:
 						
@@ -233,15 +236,19 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 				key = Callback(StationCheck, url=url,title=title,summary=summary,fmt=fmt,logo=logo),
 				title=title, summary=summary))
 		 
-
 	return oc
-
+ 			
 ####################################################################################################
 @route(PREFIX + '/StationCheck')
 def StationCheck(url, title, summary, fmt, logo):
 	Log('StationCheck')
+	Log(title);Log(summary);Log(fmt);Log(logo);
+	
 	oc = ObjectContainer(title1='Station-Check', title2=title)
-	oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
+	Log(Client.Platform)						# PHT verweigert TrackObject bei vorh. DirectoryObject 
+	client = str(Client.Platform)				# None möglich
+	if client.find ('Plex Home Theater') == -1: # 
+		oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
 	
 	try:
 		content = HTTP.Request(url, cacheTime=0).content	# Playlist
@@ -254,18 +261,26 @@ def StationCheck(url, title, summary, fmt, logo):
 		msg='Playlist could not be loaded ' + title 
 		return ObjectContainer(header=L('Error'), message=message)			
 		
-	file_url = RE_FILE.search(content)
-	Log('file_url: ' + str(file_url))
-	# file_url=''	# Test
+	urls =content.splitlines()
 
-	if file_url:
-		stream_url = file_url.group(1)
-		Log('stream_url vor getStreamMeta: ' + stream_url)		
+	pls_cont = []
+	for line in urls:
+		if '=http' in line:	
+			url = line.split('=')[1]
+			pls_cont.append(url)
+			
+	pls = repl_dop(pls_cont)
+	Log(pls[:100])
+	
+	cnt=0
+	for stream_url in pls:
+		cnt = cnt + 1		
 		ret = getStreamMeta(stream_url)				# getStreamMeta
 		st = ret.get('status')	
 		Log('ret.get.status: ' + str(st))
 		if st == 0:							# verwerfen
 			stream_url=R('not_available_en.mp3')	# mp3: Dieser Sender ist leider nicht verfügbar
+			title=title + ' | ' + 'not available'
 		else:
 			if ret.get('metadata'):					# Status 1: Stream ist up, Metadaten aktualisieren (nicht .mp3)
 				metadata = ret.get('metadata')
@@ -280,20 +295,22 @@ def StationCheck(url, title, summary, fmt, logo):
 			else:	
 				if stream_url.endswith('.fm/'):			# Bsp. http://mp3.dinamo.fm/ (SHOUTcast-Stream)
 					stream_url = '%s;' % stream_url
-		Log('stream_url nach getStreamMeta: ' + stream_url)		
+			
+		streamtitle = 'Stream %s' % cnt
+		if summary:									# None möglich
+			summary = streamtitle + ' | ' + summary + ' | ' + stream_url
+		else:
+			summary =  streamtitle + ' | ' + stream_url
+
+		oc.add(CreateTrackObject(url=stream_url,title=title,summary=summary,fmt=fmt,thumb=logo,))
 		
-		oc.add(CreateTrackObject(url=stream_url,title=title,summary=summary,thumb=logo,fmt=fmt))
-		return oc
-		
-	else:
-		if content == '':
-			msg='no Playlist found for ' + title 
-			return ObjectContainer(header=L('Error'), message=message)			
+	return oc
 	
 ####################################################################################################
 @route(PREFIX + '/CreateTrackObject')
 def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False, **kwargs):
 	Log('CreateTrackObject')
+	Log(url);Log(title);Log(summary);Log(fmt);Log(thumb);
 
 	if fmt == 'mp3':
 		container = Container.MP3
@@ -303,7 +320,7 @@ def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False, 
 		audio_codec = AudioCodec.AAC
 
 	track_object = TrackObject(
-		key = Callback(CreateTrackObject, url=url, title=title, summary=summary, fmt=fmt, include_container=True),
+		key = Callback(CreateTrackObject, url=url,title=title,summary=summary,fmt=fmt,thumb=thumb,include_container=True),
 		rating_key = url,
 		title = title,
 		summary = summary,
@@ -315,7 +332,6 @@ def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False, 
 				],
 				container = container,
 				audio_codec = audio_codec,
-				bitrate = 192,
 				audio_channels = 2
 			)
 		]
@@ -335,8 +351,9 @@ def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False, 
 #		StationCheck.
 #
 @route(PREFIX + '/PlayAudio')
-def PlayAudio(url, **kwargs):
+def PlayAudio(url):
 	Log('PlayAudio')
+	Log(url)				
 	return Redirect(url)
 	
 ####################################################################################################
@@ -575,7 +592,6 @@ def SearchUpdate(title, start, oc=None):
 			return ObjectContainer(header=msgH, message=msg)
 		else:
 			return oc	
-	
 		
 #-----------------------------
 def presentUpdate(oc,start):
@@ -615,4 +631,11 @@ def presentUpdate(oc,start):
 				tagline = tag, thumb = R(ICON_OK)))			
 
 	return oc,available
+#----------------------------------------------------------------  
+def repl_dop(liste):	# Doppler entfernen
+	mylist=liste
+	myset=set(mylist)
+	mylist=list(myset)
+	mylist.sort()
+	return mylist
 #----------------------------------------------------------------  
