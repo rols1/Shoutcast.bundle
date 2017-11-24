@@ -1,8 +1,10 @@
 CHANGE HISTORY 	Shoutcast2017
---------------	Releases: 	
---------------	
+--------------	Releases: 	https://github.com/rols1/Shoutcast2017/releases	
+--------------	Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
 
+24.11.2017	0.1.6	StationCheck: Verwendung bitrate + song in summary. Korrektur title.
+			StationCheck: Abfangen nicht ladbarer bzw. leerer Playlisten. 
 21.11.2017	0.1.5	StationCheck: Auswertung aller Streamlinks in einer Playlist (nicht nur die erste). 
 			StationCheck: stream_url in summary ergänzt.
 19.11.2017	0.1.4	Icon ergänzt, Sender-Logo hinzugefügt (Alt.: ICON), Git-Repo aktualisiert, 1. Release.	

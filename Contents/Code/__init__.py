@@ -4,8 +4,8 @@ import updater
 
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 
-VERSION =  '0.1.5'		
-VDATE = '21.11.2017'
+VERSION =  '0.1.6'		
+VDATE = '24.11.2017'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -26,7 +26,7 @@ SC_TOP500        = SC_ROOT + 'legacy/Top500?%sk=' + SC_DEVID
 SC_ALLGENRES     = SC_ROOT + 'legacy/genrelist?k=' + SC_DEVID
 SC_PRIMARYGENRES = SC_ROOT + 'genre/primary?k=' + SC_DEVID + '&f=xml'
 SC_SUBGENRES     = SC_ROOT + 'genre/secondary?parentid=%s&k=' + SC_DEVID + '&f=xml'
-SC_PLAY          = 'http://yp.shoutcast.com/sbin/tunein-station.pls?id=%s&k='+ SC_DEVID
+SC_PLAY          = 'http://yp.shoutcast.com/sbin/tunein-station.pls?id=%s&k='+ SC_DEVID # Default .pls
 
 NAME		= 'Shoutcast2017'
 PREFIX 		= '/music/shoutcast2017'
@@ -92,16 +92,20 @@ def MainMenu():
 	Log('sort-key: ' + str(Prefs['sort-key']))
 
 	oc = ObjectContainer()
-	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Search for Stations", queryParamName=SC_SEARCH), title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"),
+	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Search for Stations", queryParamName=SC_SEARCH), 
+		title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"),
 		thumb=R(ICON_SEARCH)))
-	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Now Playing", queryParamName=SC_NOWPLAYING), title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"),
+	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Now Playing", queryParamName=SC_NOWPLAYING), 
+		title=L("Search for Now Playing by Keyword..."), prompt=L("Search for Now Playing"),
 		thumb=R(ICON_SEARCH)))
+		
 	oc.add(DirectoryObject(key=Callback(GetGenres), title=L('By Genre')))
-	oc.add(DirectoryObject(key=Callback(GetGenre, title=L("Top 500 Stations"), queryParamName=SC_TOP500, query='**ignore**'), title=L("Top 500 Stations")))
+	oc.add(DirectoryObject(key=Callback(GetGenre, title=L("Top 500 Stations"), queryParamName=SC_TOP500, query='**ignore**'), 
+		title=L("Top 500 Stations")))
 	oc.add(PrefsObject(title=L("Preferences...")))
 
 #-----------------------------	
-	oc = SearchUpdate(title=NAME, start='true', oc=oc)	# Updater-Modul einbinden:
+	oc = SearchUpdate(title=NAME, start='true', oc=oc)	# Updater-Modul einbinden
 						
 	return oc
 
@@ -208,7 +212,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 		title = station.get('name').split(' - a SHOUTcast.com member station')[0]
 		summary = station.get('ct')
 		summary = "" if summary is None else summary
-		logo =  station.get('logo')
+		logo =  station.get('logo')				# fehlt häufig
 		if logo == None:
 			logo = R(ICON)
 
@@ -243,6 +247,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 def StationCheck(url, title, summary, fmt, logo):
 	Log('StationCheck')
 	Log(title);Log(summary);Log(fmt);Log(logo);
+	title_org = title; summ_org = summary
 	
 	oc = ObjectContainer(title1='Station-Check', title2=title)
 	Log(Client.Platform)						# PHT verweigert TrackObject bei vorh. DirectoryObject 
@@ -251,15 +256,18 @@ def StationCheck(url, title, summary, fmt, logo):
 		oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
 	
 	try:
-		content = HTTP.Request(url, cacheTime=0).content	# Playlist
+		content = HTTP.Request(url, cacheTime=0).content	# Playlist im .pls-Format (SC_PLAY)
 	except:
 		Log('HTTP.Request fehlgeschlagen')
 		content=''
-	Log(content)
+	Log('content:' + content)
 	
 	if content == '':
-		msg='Playlist could not be loaded ' + title 
-		return ObjectContainer(header=L('Error'), message=message)			
+		msg='Playlist could not be loaded: ' + title 
+		return ObjectContainer(header=L('Error'), message=msg)			
+	if '=http' not in content:
+		msg='Playlist is empty: ' + title 
+		return ObjectContainer(header=L('Error'), message=msg)			
 		
 	urls =content.splitlines()
 
@@ -274,6 +282,7 @@ def StationCheck(url, title, summary, fmt, logo):
 	
 	cnt=0
 	for stream_url in pls:
+		summ=''
 		cnt = cnt + 1		
 		ret = getStreamMeta(stream_url)				# getStreamMeta
 		st = ret.get('status')	
@@ -287,6 +296,18 @@ def StationCheck(url, title, summary, fmt, logo):
 				Log('metadata:'); Log(metadata)						
 				bitrate = metadata.get('bitrate')	# bitrate aktualisieren, falls in Metadaten vorh.
 				Log(bitrate)					
+				try:
+					song = metadata.get('song')		# mögl.: UnicodeDecodeError: 'utf8' codec can't decode..., Bsp.
+					song = song.decode('utf-8')		# 	'song': 'R\r3\x90\x86\x11\xd7[\x14\xa6\xe1k...
+					song = unescape(song)
+				except:
+					song=''
+				if song.find('adw_ad=') == -1:		# ID3-Tags (Indiz: adw_ad=) verwerfen
+					if bitrate and song:							
+						summ = 'Song: %s | Bitrate: %sKB' % (song, bitrate) # neues summary
+					if bitrate and song == '':	
+						summ = '%s | Bitrate: %sKB' % (summ_org, bitrate)	# altes summary (i.d.R Song) ergänzen
+					
 			if  ret.get('hasPortNumber') == 'true': # auch SHOUTcast ohne Metadaten möglich, Bsp. Holland FM Gran Canaria,
 				if stream_url.endswith('/'):				#	http://stream01.streamhier.nl:9010
 					stream_url = '%s;' % stream_url
@@ -296,13 +317,11 @@ def StationCheck(url, title, summary, fmt, logo):
 				if stream_url.endswith('.fm/'):			# Bsp. http://mp3.dinamo.fm/ (SHOUTcast-Stream)
 					stream_url = '%s;' % stream_url
 			
-		streamtitle = 'Stream %s' % cnt
-		if summary:									# None möglich
-			summary = streamtitle + ' | ' + summary + ' | ' + stream_url
-		else:
-			summary =  streamtitle + ' | ' + stream_url
+		summ  = '%s | %s' % (summ, stream_url)
+		summ = summ.decode('utf-8')
+		title = title_org + ' | Stream %s | %s'  % (str(cnt), fmt)
 
-		oc.add(CreateTrackObject(url=stream_url,title=title,summary=summary,fmt=fmt,thumb=logo,))
+		oc.add(CreateTrackObject(url=stream_url,title=title,summary=summ,fmt=fmt,thumb=logo,))
 		
 	return oc
 	
@@ -538,6 +557,7 @@ def shoutcastCheck(response, headers, itsOld):
 		Log("icy metaint: " + str(metaint))
 		read_buffer = metaint + 255
 		content = response.read(read_buffer)
+		# Log('icy buff: '); Log(content)			# 'utf8'-Error möglich
 
 		start = "StreamTitle='"
 		end = "';"
@@ -571,7 +591,7 @@ def SearchUpdate(title, start, oc=None):
 				msgH = L('Error'); 
 				msg = L('Github is not available') +  ' - ' +  L('Please deselect the Plugin-Notification')
 				Log(msg)		
-				# return ObjectContainer(header=msgH, message=msg) #
+				# return ObjectContainer(header=msgH, message=msg) # skip - das blockt das Startmenü
 							
 			if 	available == 'true':					# Update präsentieren
 				return oc
