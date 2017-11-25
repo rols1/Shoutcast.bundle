@@ -4,8 +4,8 @@ import updater
 
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 
-VERSION =  '0.1.6'		
-VDATE = '24.11.2017'
+VERSION =  '0.1.7'		
+VDATE = '25.11.2017'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -51,6 +51,8 @@ def CreateDict():
 	# Create dict objects
 	Dict['genres'] = {}
 	Dict['sortedGenres'] = []
+	if not Dict['Favourites']:
+		Dict['Favourites'] = []
 
 ####################################################################################################
 def UpdateCache():
@@ -90,8 +92,14 @@ def MainMenu():
 	
 	Log('min-bitrate: ' + str(Prefs['min-bitrate']))
 	Log('sort-key: ' + str(Prefs['sort-key']))
+	# Dict['Favourites'] = []						# Test: Favs löschen
+	
+	oc = ObjectContainer(no_cache=True)				# no_cache für Favorites
+	Log(Dict['Favourites'])
+	if Prefs['UseFavourites']:						# Favoriten einbinden
+		if Dict['Favourites']:
+			oc.add(DirectoryObject(key=Callback(FavouritesShow), title="Favourites", thumb=R('favs.png')))
 
-	oc = ObjectContainer()
 	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Search for Stations", queryParamName=SC_SEARCH), 
 		title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"),
 		thumb=R(ICON_SEARCH)))
@@ -247,7 +255,7 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 def StationCheck(url, title, summary, fmt, logo):
 	Log('StationCheck')
 	Log(title);Log(summary);Log(fmt);Log(logo);
-	title_org = title; summ_org = summary
+	title_org=title; summ_org=summary; station_url=url
 	
 	oc = ObjectContainer(title1='Station-Check', title2=title)
 	Log(Client.Platform)						# PHT verweigert TrackObject bei vorh. DirectoryObject 
@@ -323,8 +331,30 @@ def StationCheck(url, title, summary, fmt, logo):
 
 		oc.add(CreateTrackObject(url=stream_url,title=title,summary=summ,fmt=fmt,thumb=logo,))
 		
+	if Prefs['UseFavourites']:		# Favoriten-Menü
+		FavExist = False
+		try:
+			for Fav in Dict['Favourites']:
+				if station_url in Fav:
+					FavExist = True
+					break
+		except:
+				pass
+					
+		if FavExist == False:		
+			title = 'add Favourite'			
+			oc.add(DirectoryObject(key=Callback(Favourit, 
+				ID='add',url=station_url,title=title_org,summary=summ_org,fmt=fmt,logo=logo), 
+				title=title,summary=title_org,thumb=R('fav_add.png')))
+		if FavExist == True:		
+			title = 'remove %s' % title_org
+			summ = 'remove Favourite'
+			oc.add(DirectoryObject(key=Callback(Favourit, 
+				ID='remove', url=station_url), 						# url reicht hier für Abgleich
+				title=title_org,summary=summ,thumb=R('fav_remove.png')))
+		
 	return oc
-	
+
 ####################################################################################################
 @route(PREFIX + '/CreateTrackObject')
 def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False, **kwargs):
@@ -374,6 +404,54 @@ def PlayAudio(url):
 	Log('PlayAudio')
 	Log(url)				
 	return Redirect(url)
+	
+####################################################################################################
+#					Favoriten-Funktionen (anders als TuneIn2017 nur lokal und ohne Ordner)
+####################################################################################################
+
+@route(PREFIX + '/Favourit')
+def Favourit(ID,url,title='',summary='',fmt='',logo=''):		# ID: add / remove
+	Log('Favourit: ' + ID)
+	
+	if Dict['Favourites'] == None:
+		Dict['Favourites'] = []
+		
+	if ID == 'add':
+		if logo == '':
+			logo = ICON
+		Fav = '%s|%s|%s|%s|%s'	% (url,title,summary,fmt,logo)
+		Dict['Favourites'].append(Fav)
+		Log(Fav)
+		msg = 'Favourite added'		
+	else:
+		Favs = Dict['Favourites']
+		for fav in Favs:
+			if url in fav:					# url reicht für Abgleich
+				Dict['Favourites'].remove(fav)
+		msg = 'Favourite removed'
+		
+	Dict.Save()	
+	return ObjectContainer(header=L('Info'), message=msg)
+				
+#-----------------------------	
+	
+@route(PREFIX + '/FavouritesShow')
+def FavouritesShow():
+	Log('FavouritsShow')
+	oc = ObjectContainer(title1='Station-Check', title2='Favourites')
+	oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
+	
+	Favs = Dict['Favourites']
+	Log(Favs)
+	for fav in Favs:
+		Log(fav)
+		url,title,summary,fmt,logo = fav.split('|')
+		oc.add(DirectoryObject(
+			key = Callback(StationCheck, url=url,title=title,summary=summary,fmt=fmt,logo=logo),
+			title=title, thumb=R(logo)))	# summary (song,  Listener) hier nicht verwenden
+			
+	# remove-Button nicht erforderlich - kommt bei Anwahl der Station
+	return oc
 	
 ####################################################################################################
 #									Streamtest-Funktionen (TuneIn2017)

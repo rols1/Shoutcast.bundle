@@ -3,6 +3,7 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
 
+25.11.2017	0.1.7	Favourite-Option (local, without folder): Preferences and functions adjusted.
 24.11.2017	0.1.6	StationCheck: Verwendung bitrate + song in summary. Korrektur title.
 			StationCheck: Abfangen nicht ladbarer bzw. leerer Playlisten. 
 21.11.2017	0.1.5	StationCheck: Auswertung aller Streamlinks in einer Playlist (nicht nur die erste). 

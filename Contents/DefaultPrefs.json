@@ -26,6 +26,12 @@
 		]
 	},
 	{	
+		"id": "UseFavourites",
+		"label": "use Favourites",
+		"type": "bool",
+		"default": "false"
+	},
+	{	
 		"id": "InfoUpdate",
 		"label": "look for update at plugin-start",
 		"type": "bool",
