@@ -16,9 +16,13 @@ INSTALLATION:
 * Restart Plex Media Server
 * [Plug-Ins-Folder](https://support.plex.tv/hc/en-us/articles/201106098) / [How do I find the Plug-Ins folder?](https://support.plex.tv/hc/en-us/articles/201106098)
 
-UPDATES:
-===================  
-Update-Modul is integrated.
+**Options:**
+
+* Search:  "for Stations", "Now Playing"
+* Listing:  "By Genre", "Top 500 Stations"
+* Settings for bitrate and sorting
+* Favourites-Option (only local)
+* Updater-Modul
 
 Pictures:
 ===================  
