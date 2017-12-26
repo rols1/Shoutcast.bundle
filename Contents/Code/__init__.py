@@ -1,11 +1,13 @@
 import sys			
 import updater
-#					# weitere Module in getStreamMeta
+from urlparse import urlparse 
+# weitere Module in getStreamMeta
 
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
+# Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.1.7'		
-VDATE = '25.11.2017'
+VERSION =  '0.1.9'		
+VDATE = '26.12.2017'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -95,7 +97,8 @@ def MainMenu():
 	# Dict['Favourites'] = []						# Test: Favs löschen
 	
 	oc = ObjectContainer(no_cache=True)				# no_cache für Favorites
-	Log(Dict['Favourites'])
+	Log('Favourites: ' + str(len(Dict['Favourites'])))
+	# Log(Dict['Favourites'])
 	if Prefs['UseFavourites']:						# Favoriten einbinden
 		if Dict['Favourites']:
 			oc.add(DirectoryObject(key=Callback(FavouritesShow), title="Favourites", thumb=R('favs.png')))
@@ -204,6 +207,9 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 		stations.sort(key = lambda station: station.get('name'), reverse=False)
 
 	Log(len(stations))
+	if len(stations) == 0:
+		error_txt = 'Sorry, nothing found'
+		return ObjectContainer(header=L('Info'), message=error_txt)			
 
 	rcnt=0						# zählt Stationen
 	for station in stations:
@@ -324,6 +330,13 @@ def StationCheck(url, title, summary, fmt, logo):
 			else:	
 				if stream_url.endswith('.fm/'):			# Bsp. http://mp3.dinamo.fm/ (SHOUTcast-Stream)
 					stream_url = '%s;' % stream_url
+				else:								# ohne Portnummer, ohne Pfad: letzter Test auf Shoutcast-Status 
+					p = urlparse(url)
+					if p.path == '':
+						cont = HTTP.Request(url).content# Bsp. Radio Soma -> http://live.radiosoma.com
+						if 	'<b>Stream is up at' in cont:
+							Log('Shoutcast ohne Portnummer: <b>Stream is up at')
+							url = '%s/;' % url	
 			
 		summ  = '%s | %s' % (summ, stream_url)
 		summ = summ.decode('utf-8')
@@ -476,7 +489,6 @@ def getStreamMeta(address):
 	import re					
 	import urllib2			
 	import ssl				# HTTPS-Handshake
-	from urlparse import urlparse 
 				
 	shoutcast = False
 	status = 0

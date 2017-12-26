@@ -3,6 +3,9 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
 
+26.11.2017	0.1.9	StationCheck: Erkennung/Behandlung von Shoutcast-Streams ohne Portnummer, ohne Pfad
+			(Methode aus TUNEIN2017).	
+not on github	0.1.8	MainMenu: Log Favourites ersetzt durch Anzahl.
 25.11.2017	0.1.7	Favourite-Option (local, without folder): Preferences and functions adjusted.
 24.11.2017	0.1.6	StationCheck: Verwendung bitrate + song in summary. Korrektur title.
 			StationCheck: Abfangen nicht ladbarer bzw. leerer Playlisten. 
