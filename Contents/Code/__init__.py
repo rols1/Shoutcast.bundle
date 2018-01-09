@@ -6,8 +6,8 @@ from urlparse import urlparse
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 # Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.1.9'		
-VDATE = '26.12.2017'
+VERSION =  '0.2.0'		
+VDATE = '09.01.2018'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -97,7 +97,8 @@ def MainMenu():
 	# Dict['Favourites'] = []						# Test: Favs löschen
 	
 	oc = ObjectContainer(no_cache=True)				# no_cache für Favorites
-	Log('Favourites: ' + str(len(Dict['Favourites'])))
+	if Dict['Favourites']:
+		Log('Favourites: ' + str(len(Dict['Favourites'])))
 	# Log(Dict['Favourites'])
 	if Prefs['UseFavourites']:						# Favoriten einbinden
 		if Dict['Favourites']:

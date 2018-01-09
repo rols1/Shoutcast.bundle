@@ -3,6 +3,7 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
 
+09.01.2018	0.2.0	MainMenu: suppress log-output of None-typ of Dict['Favourites'].
 26.11.2017	0.1.9	StationCheck: Erkennung/Behandlung von Shoutcast-Streams ohne Portnummer, ohne Pfad
 			(Methode aus TUNEIN2017).	
 not on github	0.1.8	MainMenu: Log Favourites ersetzt durch Anzahl.
