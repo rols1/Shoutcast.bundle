@@ -6,8 +6,8 @@ from urlparse import urlparse
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 # Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.2.0'		
-VDATE = '09.01.2018'
+VERSION =  '0.2.1'		
+VDATE = '19.02.2018'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -302,7 +302,7 @@ def StationCheck(url, title, summary, fmt, logo):
 		ret = getStreamMeta(stream_url)				# getStreamMeta
 		st = ret.get('status')	
 		Log('ret.get.status: ' + str(st))
-		if st == 0:							# verwerfen
+		if st == 0:									# kein Stream, verwerfen
 			stream_url=R('not_available_en.mp3')	# mp3: Dieser Sender ist leider nicht verfügbar
 			title=title + ' | ' + 'not available'
 		else:
@@ -310,7 +310,7 @@ def StationCheck(url, title, summary, fmt, logo):
 				metadata = ret.get('metadata')
 				Log('metadata:'); Log(metadata)						
 				bitrate = metadata.get('bitrate')	# bitrate aktualisieren, falls in Metadaten vorh.
-				Log(bitrate)					
+				Log(bitrate)
 				try:
 					song = metadata.get('song')		# mögl.: UnicodeDecodeError: 'utf8' codec can't decode..., Bsp.
 					song = song.decode('utf-8')		# 	'song': 'R\r3\x90\x86\x11\xd7[\x14\xa6\xe1k...
@@ -321,8 +321,8 @@ def StationCheck(url, title, summary, fmt, logo):
 					if bitrate and song:							
 						summ = 'Song: %s | Bitrate: %sKB' % (song, bitrate) # neues summary
 					if bitrate and song == '':	
-						summ = '%s | Bitrate: %sKB' % (summ_org, bitrate)	# altes summary (i.d.R Song) ergänzen
-					
+						summ = '%s | Bitrate: %sKB' % (str(summ_org), bitrate)	# altes summary (i.d.R Song) ergänzen
+				
 			if  ret.get('hasPortNumber') == 'true': # auch SHOUTcast ohne Metadaten möglich, Bsp. Holland FM Gran Canaria,
 				if stream_url.endswith('/'):				#	http://stream01.streamhier.nl:9010
 					stream_url = '%s;' % stream_url
@@ -339,9 +339,16 @@ def StationCheck(url, title, summary, fmt, logo):
 							Log('Shoutcast ohne Portnummer: <b>Stream is up at')
 							url = '%s/;' % url	
 			
+		if summ.startswith('None'):	
+			summ = summ.replace('None', 'song title not found')
+		Log('summ: %s' % summ)
 		summ  = '%s | %s' % (summ, stream_url)
 		summ = summ.decode('utf-8')
-		title = title_org + ' | Stream %s | %s'  % (str(cnt), fmt)
+		if st == 0:					# ret.get('status')
+			title = title
+			summ = 'Error message: %s' % ret.get('error')
+		else:
+			title = title_org + ' | Stream %s | %s'  % (str(cnt), fmt)
 
 		oc.add(CreateTrackObject(url=stream_url,title=title,summary=summ,fmt=fmt,thumb=logo,))
 		
@@ -750,3 +757,15 @@ def repl_dop(liste):	# Doppler entfernen
 	mylist.sort()
 	return mylist
 #----------------------------------------------------------------  
+def unescape(line):	# HTML-Escapezeichen in Text entfernen, bei Bedarf erweitern.
+#					# s.a.  ../Framework/api/utilkit.py
+	if line == None:
+		return line
+	line_ret = (line.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+		.replace("&#39;", "'").replace("&#039;", "'").replace("&quot;", '"').replace("&#x27;", "'")
+		.replace("&ouml;", "ö").replace("&auml;", "ä").replace("&uuml;", "ü").replace("&szlig;", "ß")
+		.replace("&Ouml;", "Ö").replace("&Auml;", "Ä").replace("&Uuml;", "Ü").replace("&apos;", "'"))
+		
+	# Log(line_ret)		# bei Bedarf
+	return line_ret	
+#----------------------------------------------------------------  	
