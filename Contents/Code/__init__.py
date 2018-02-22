@@ -1,4 +1,7 @@
-import sys			
+import sys	
+import htmllib		# unescape_html
+import urllib		# urllib.unquote
+		
 import updater
 from urlparse import urlparse 
 # weitere Module in getStreamMeta
@@ -6,8 +9,8 @@ from urlparse import urlparse
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 # Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.2.1'		
-VDATE = '19.02.2018'
+VERSION =  '0.2.7'		
+VDATE = '22.02.2018'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -97,6 +100,13 @@ def MainMenu():
 	# Dict['Favourites'] = []						# Test: Favs löschen
 	
 	oc = ObjectContainer(no_cache=True)				# no_cache für Favorites
+	
+	loc = Prefs['RadionomyLang']
+	if loc == None:
+		loc = "EN/English"
+	Dict['loc'] = loc.split('/')[0]
+	Log('loc: ' + loc)
+	
 	if Dict['Favourites']:
 		Log('Favourites: ' + str(len(Dict['Favourites'])))
 	# Log(Dict['Favourites'])
@@ -117,10 +127,53 @@ def MainMenu():
 	oc.add(PrefsObject(title=L("Preferences...")))
 
 #-----------------------------	
+	# Addons
+	if  Prefs['UseRadionomyAddon']:	
+		oc.add(DirectoryObject(key=Callback(MainMenuRadionomy, title='Radionomy'), 
+			title="Radionomy", thumb=R('radionomy.png')))		
+#-----------------------------	
+
 	oc = SearchUpdate(title=NAME, start='true', oc=oc)	# Updater-Modul einbinden
 						
 	return oc
+	
+####################################################################################################
+@route(PREFIX + '/MainMenuRadionomy')
+def MainMenuRadionomy(title):
+	Log('MainMenuRadionomy')
+	
+	oc = ObjectContainer(no_cache=True, title2=title)
+	# Home to Menü Shoutcast2017			
+	oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
+	path = 'https://www.radionomy.com/%s/style' % Dict['loc'] 
+	
+	if Dict['RD_Style']:		# Cache Leitseite mit den Genres
+		page =  Dict['RD_Style']
+	else:
+		page = HTTP.Request(path).content
+		
+	GenreBlock = stringextract('id="browseMainGenre', '</ul>', page)		# Menü Genres
+	genres = blockextract('<li class=', GenreBlock)
+	for genre in genres:
+		url 	= stringextract('href="', '"', genre)
+		url		= 'https://www.radionomy.com' + url
+		# title	= stringextract('internal">', '</a>', genre)
+		# title	= unescape_html(title)										# entfernt Sprachsonderzeichen
+		title 	= url.split('/')[-1]
+		title 	= urllib.unquote(title).decode('utf8')
 
+		# Log(title); Log(url)
+		if "featured" in genre:												# ohne Subgenres (2 am Anfang)
+			oc.add(DirectoryObject(key=Callback(RD_Genre, url=url, title=title),
+				title=title, thumb=R('icon-folder.png')))			
+		else:																# mit Subgenres 
+			oc.add(DirectoryObject(key=Callback(RD_SubGenres, url=url, title=title),
+				title=title, thumb=R('icon-folder.png')))
+
+	oc.add(InputDirectoryObject(key=Callback(RD_Search, title="Search Radionomy",), 
+		title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R(ICON_SEARCH)))
+	
+	return oc
 ####################################################################################################
 @route(PREFIX + '/genres')
 def GetGenres():
@@ -258,8 +311,9 @@ def GetGenre(title, queryParamName=SC_BYGENRE, query=''):
 	return oc
  			
 ####################################################################################################
+# add_loc: Länder postfix z.B. EN für Radionomy
 @route(PREFIX + '/StationCheck')
-def StationCheck(url, title, summary, fmt, logo):
+def StationCheck(url, title, summary, fmt, logo, home=''):
 	Log('StationCheck')
 	Log(title);Log(summary);Log(fmt);Log(logo);
 	title_org=title; summ_org=summary; station_url=url
@@ -268,7 +322,11 @@ def StationCheck(url, title, summary, fmt, logo):
 	Log(Client.Platform)						# PHT verweigert TrackObject bei vorh. DirectoryObject 
 	client = str(Client.Platform)				# None möglich
 	if client.find ('Plex Home Theater') == -1: # 
-		oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
+		if home == 'Radionomy':
+			oc.add(DirectoryObject(key=Callback(MainMenuRadionomy,title='Radionomy'),title='Home', 
+				summary='Home',thumb=R('home_radionomy.png')))	
+		else:
+			oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
 	
 	try:
 		content = HTTP.Request(url, cacheTime=0).content	# Playlist im .pls-Format (SC_PLAY)
@@ -280,7 +338,7 @@ def StationCheck(url, title, summary, fmt, logo):
 	if content == '':
 		msg='Playlist could not be loaded: ' + title 
 		return ObjectContainer(header=L('Error'), message=msg)			
-	if '=http' not in content:
+	if 'http' not in content:
 		msg='Playlist is empty: ' + title 
 		return ObjectContainer(header=L('Error'), message=msg)			
 		
@@ -290,7 +348,9 @@ def StationCheck(url, title, summary, fmt, logo):
 	for line in urls:
 		if '=http' in line:	
 			url = line.split('=')[1]
-			pls_cont.append(url)
+		if line.startswith('http'):					# z.B. Radionomy
+			url = line 
+		pls_cont.append(url)
 			
 	pls = repl_dop(pls_cont)
 	Log(pls[:100])
@@ -314,14 +374,17 @@ def StationCheck(url, title, summary, fmt, logo):
 				try:
 					song = metadata.get('song')		# mögl.: UnicodeDecodeError: 'utf8' codec can't decode..., Bsp.
 					song = song.decode('utf-8')		# 	'song': 'R\r3\x90\x86\x11\xd7[\x14\xa6\xe1k...
-					song = unescape(song)
+					song = unescape_html(song)
 				except:
 					song=''
+				
 				if song.find('adw_ad=') == -1:		# ID3-Tags (Indiz: adw_ad=) verwerfen
 					if bitrate and song:							
 						summ = 'Song: %s | Bitrate: %sKB' % (song, bitrate) # neues summary
 					if bitrate and song == '':	
 						summ = '%s | Bitrate: %sKB' % (str(summ_org), bitrate)	# altes summary (i.d.R Song) ergänzen
+					if bitrate == None and song == '':
+						summ = 'song title and bitrate unknown'	
 				
 			if  ret.get('hasPortNumber') == 'true': # auch SHOUTcast ohne Metadaten möglich, Bsp. Holland FM Gran Canaria,
 				if stream_url.endswith('/'):				#	http://stream01.streamhier.nl:9010
@@ -341,6 +404,8 @@ def StationCheck(url, title, summary, fmt, logo):
 			
 		if summ.startswith('None'):	
 			summ = summ.replace('None', 'song title not found')
+		if summ == '':	
+			summ = 'song title and bitrate unknown'	
 		Log('summ: %s' % summ)
 		summ  = '%s | %s' % (summ, stream_url)
 		summ = summ.decode('utf-8')
@@ -432,7 +497,7 @@ def PlayAudio(url):
 
 @route(PREFIX + '/Favourit')
 def Favourit(ID,url,title='',summary='',fmt='',logo=''):		# ID: add / remove
-	Log('Favourit: ' + ID)
+	Log('Favourit: ' + ID); Log(logo)
 	
 	if Dict['Favourites'] == None:
 		Dict['Favourites'] = []
@@ -463,13 +528,16 @@ def FavouritesShow():
 	oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
 	
 	Favs = Dict['Favourites']
-	Log(Favs)
+	# Log(Favs)
 	for fav in Favs:
 		Log(fav)
+		thumb = 'icon-default.jpg'
 		url,title,summary,fmt,logo = fav.split('|')
+		if 'listen.radionomy.com' in url:
+			thumb = 'radionomy.png'
 		oc.add(DirectoryObject(
 			key = Callback(StationCheck, url=url,title=title,summary=summary,fmt=fmt,logo=logo),
-			title=title, thumb=R(logo)))	# summary (song,  Listener) hier nicht verwenden
+			title=title, thumb=R(thumb)))	# summary (song,  Listener) hier nicht verwenden
 			
 	# remove-Button nicht erforderlich - kommt bei Anwahl der Station
 	return oc
@@ -554,6 +622,16 @@ def getStreamMeta(address):
 			metadata = shoutcastCheck(response, headers, True)
 		else:
 			metadata = False
+			
+		try:										# Test suspended station, Bsp. Rolling Stones Radio
+			content = response.read(100)			#	http://server-uk4.radioseninternetuy.com:9528/; 
+			Log(content)
+			if 'station is suspended' in content:
+				Log('station is suspended')
+				return {"status": 0, "metadata": None, "hasPortNumber": True, "error": content}
+		except:
+			pass
+					
 		response.close()
 		error=''
 		return {"status": status, "metadata": metadata, "hasPortNumber": hasPortNumber, "error": error}
@@ -659,7 +737,7 @@ def shoutcastCheck(response, headers, itsOld):
 
 		start = "StreamTitle='"
 		end = "';"
-
+		
 		try: 
 			title = re.search('%s(.*)%s' % (start, end), content[metaint:]).group(1)
 			title = re.sub("StreamUrl='.*?';", "", title).replace("';", "").replace("StreamUrl='", "")
@@ -674,7 +752,107 @@ def shoutcastCheck(response, headers, itsOld):
 	else:
 		Log("No metaint")
 		return False
-#---------------------------------------------------		
+#---------------------------------------------------	
+####################################################################################################
+#									Radionomy addon
+####################################################################################################
+@route(PREFIX + '/RD_Search')
+def RD_Search(title, query):		
+	Log('RD_Search')
+	Log(query);
+	oc = ObjectContainer(title2=title)
+	oc.add(DirectoryObject(key=Callback(MainMenuRadionomy,title='Radionomy'),title='Home', 
+		summary='Home',thumb=R('home_radionomy.png')))
+	
+	path='https://www.radionomy.com/%s/search/index?query=%s'	% (Dict['loc'], query)
+	Log(path)
+	page = HTTP.Request(path).content
+	records = blockextract('class="browseRadioWrap"', page)
+	Log(len(records))
+	
+	if len(records) == 1:
+		return ObjectContainer(header=L('Error'), message='nothing found for >%s<' % query)
+	
+	for rec in records:
+		url = stringextract('<a href="', '"', rec)		# Bsp. /en/radio/thebeatles/index
+		url = url.replace('/index', '.m3u')
+		url = 'http://listen.radionomy.com/' + url.split('/')[-1]
+		img = stringextract('class="radioCover" src="', '"', rec)
+		title = stringextract('class="radioName">', '</p>', rec)
+		title	= unescape_html(title)
+		title	= title.decode('utf-8')
+		Log(url); Log(img); Log(title);
+		oc.add(DirectoryObject(key=Callback(StationCheck, url=url,title=title,summary=title,
+			fmt='mp3',logo=img,home='Radionomy'),title=title, summary=title, thumb=img))
+				
+	return oc
+
+#---------------------------------------------------	
+@route(PREFIX + '/RD_SubGenres')
+def RD_SubGenres(url, title):
+	Log('RD_SubGenres')
+	oc = ObjectContainer(title2=title)
+	oc.add(DirectoryObject(key=Callback(MainMenuRadionomy,title='Radionomy'),title='Home', 
+		summary='Home',thumb=R('home_radionomy.png')))
+	
+	page = HTTP.Request(url).content
+	GenreBlock = stringextract('id="browseSubGenre', '</ul>', page)		# Menü SubGenres
+	genres = blockextract('<li class=', GenreBlock)
+
+	if len(genres) == 0:
+		msg='Nothing found for >%s<: ' % title 
+		return ObjectContainer(header=L('Error'), message=msg)			
+	
+	for genre in genres:
+		url 	= stringextract('href="', '"', genre)
+		url		= 'https://www.radionomy.com' + url
+		title	= stringextract('internal">', '</a>', genre)
+		title	= unescape_html(title)
+		title	= title.decode('utf-8')
+		# Log(url); Log(img); Log(title);
+		oc.add(DirectoryObject(key=Callback(RD_Genre, url=url, title=title),
+			title=title, thumb=R('icon-folder.png')))			
+	
+	return oc
+#---------------------------------------------------	
+@route(PREFIX + '/RD_Genre')
+def RD_Genre(url, title, offset=0):
+	Log('RD_Genre'); Log(str(offset))
+	url_org = url					# sichern für More
+	oc = ObjectContainer(title2=title)
+	oc.add(DirectoryObject(key=Callback(MainMenuRadionomy,title='Radionomy'),title='Home', 
+		summary='Home',thumb=R('home_radionomy.png')))
+		
+	page = HTTP.Request(url).content	
+	Log(len(page))
+	
+	records = blockextract('class="browseRadioWrap', page)		# Stationen eines (Sub-)Genre (wie RD_Search)
+	if len(records) == 0:
+		msg='Nothing found for >%s<: ' % title 
+		return ObjectContainer(header=L('Error'), message=msg)			
+		
+	for rec in records:
+		url = stringextract('<a href="', '"', rec)				# Bsp. /en/radio/thebeatles/index
+		# Log(url)
+		url = url.replace('/index', '.m3u')
+		url = 'http://listen.radionomy.com/' + url.split('/')[-1] # /en/radio/ abschneiden
+		# Bsp.-url http://listen.radionomy.com/101smoothjazz.m3u
+		img = stringextract('class="radioCover" src="', '"', rec)
+		title = stringextract('class="radioName">', '</p>', rec)
+		title	= unescape_html(title)
+		title	= title.decode('utf-8')
+
+		#Log(url); Log(img); Log(title);
+		oc.add(DirectoryObject(key=Callback(StationCheck, url=url,title=title,summary=title,
+			fmt='mp3',logo=img,home='Radionomy'),title=title, summary=title, thumb=img))
+	
+	# todo: More-Button - Post-Request ("scrollOffset=x")
+#	offset = int(offset) + 1
+#	oc.add(DirectoryObject(key=Callback(RD_Genre, url=url_org, title=title,offset=offset),
+#		title='More', thumb=R('more.png')))			
+		
+	return oc
+
 ####################################################################################################
 #									Hilfsfunktionen
 ####################################################################################################
@@ -757,15 +935,56 @@ def repl_dop(liste):	# Doppler entfernen
 	mylist.sort()
 	return mylist
 #----------------------------------------------------------------  
-def unescape(line):	# HTML-Escapezeichen in Text entfernen, bei Bedarf erweitern.
-#					# s.a.  ../Framework/api/utilkit.py
-	if line == None:
+def unescape_html(line):	# HTML-Escapezeichen  ersetzen (Sprachsonderzeichen leider nur '')
+	if line == None or line == '':
 		return line
-	line_ret = (line.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
-		.replace("&#39;", "'").replace("&#039;", "'").replace("&quot;", '"').replace("&#x27;", "'")
-		.replace("&ouml;", "ö").replace("&auml;", "ä").replace("&uuml;", "ü").replace("&szlig;", "ß")
-		.replace("&Ouml;", "Ö").replace("&Auml;", "Ä").replace("&Uuml;", "Ü").replace("&apos;", "'"))
+	
+	s = htmllib.HTMLParser(None)
+	s.save_bgn()
+	s.feed(line)
+	return s.save_end()
 		
-	# Log(line_ret)		# bei Bedarf
-	return line_ret	
+#	line_ret = (line.replace('&#39;', '\'').replace('&#233;', 'é').replace('&#232;', 'è')
+#		.replace('&#250;', 'Ú'))
+#----------------------------------------------------------------  
+def blockextract(blockmark, mString):  	# extrahiert Blöcke begrenzt durch blockmark aus mString
+	#	blockmark bleibt Bestandteil der Rückgabe - im Unterschied zu split()
+	#	Rückgabe in Liste. Letzter Block reicht bis Ende mString (undefinierte Länge!),
+	#		Variante mit definierter Länge siehe Plex-Plugin-TagesschauXL (extra Parameter blockendmark)
+	#	Verwendung, wenn xpath nicht funktioniert (Bsp. Tabelle EPG-Daten www.dw.com/de/media-center/live-tv/s-100817)
+	rlist = []				
+	if 	blockmark == '' or 	mString == '':
+		Log('blockextract: blockmark or mString leer')
+		return rlist
+	
+	pos = mString.find(blockmark)
+	if 	mString.find(blockmark) == -1:
+		Log('blockextract: blockmark nicht in mString')
+		# Log(pos); Log(blockmark);Log(len(mString));Log(len(blockmark));
+		return rlist
+	pos2 = 1
+	while pos2 > 0:
+		pos1 = mString.find(blockmark)						
+		ind = len(blockmark)
+		pos2 = mString.find(blockmark, pos1 + ind)		
+	
+		block = mString[pos1:pos2]	# extrahieren einschl.  1. blockmark
+		rlist.append(block)
+		# reststring bilden:
+		mString = mString[pos2:]	# Rest von mString, Block entfernt	
+	return rlist  
+#----------------------------------------------------------------  
+def stringextract(mFirstChar, mSecondChar, mString):  	# extrahiert Zeichenkette zwischen 1. + 2. Zeichenkette
+	pos1 = mString.find(mFirstChar)						# return '' bei Fehlschlag
+	ind = len(mFirstChar)
+	#pos2 = mString.find(mSecondChar, pos1 + ind+1)		
+	pos2 = mString.find(mSecondChar, pos1 + ind)		# ind+1 beginnt bei Leerstring um 1 Pos. zu weit
+	rString = ''
+
+	if pos1 >= 0 and pos2 >= 0:
+		rString = mString[pos1+ind:pos2]	# extrahieren 
+		
+	#Log(mString); Log(mFirstChar); Log(mSecondChar); 	# bei Bedarf
+	#Log(pos1); Log(ind); Log(pos2);  Log(rString); 
+	return rString
 #----------------------------------------------------------------  	

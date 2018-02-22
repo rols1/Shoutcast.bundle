@@ -26,6 +26,24 @@
 		]
 	},
 	{	
+		"id": "UseRadionomyAddon",
+		"label": "use Radionomy addon",
+		"type": "bool",
+		"default": "false"
+	},
+	{
+		"id": "RadionomyLang",
+		"type": "enum",
+		"default": "EN/English",
+		"label": "Radionomy Languages (only 4 supported)",
+		"values": [
+			"EN/English",
+			"FR/French",
+			"DE/German",
+			"ES/Spanish"
+		]
+	},
+	{	
 		"id": "UseFavourites",
 		"label": "use Favourites",
 		"type": "bool",
