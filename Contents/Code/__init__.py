@@ -11,7 +11,7 @@ import cookielib	# für Radionomy
 #	https://forums.plex.tv/discussion/comment/296468/#Comment_296468
 import keepalive	# für Radionomy 
 from keepalive import HTTPHandler
-import random		# Radionomy: random-ID's für Dict['openerID']
+import random		# Radionomy: random-ID's für global openerStore
 
 						
 import updater
@@ -28,7 +28,7 @@ ICON_MAIN_UPDATER 		= 'plugin-update.png'
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
 ICON_OK					= 'icon-ok.png'
 ICON_SEARCH 			= 'suche.png'
-
+![](https://us.v-cdn.net/6025034/uploads/editor/dd/lt6wk7ra1yj0.png "")
 ART    		= 'art-default.jpg'		# Quelle: https://de.wikipedia.org/w/index.php?curid=4483484
 ICON   		= 'icon-default.jpg'	# wie oben, Symbol ohne Schriftzug,  angepasst auf 512x512px
 
@@ -65,14 +65,7 @@ def Start():
 	openerStore = {}
 	
 	ValidatePrefs()
-	
-	try:												# Radionomy: clear handler, openerID-Instanzen
-		keepalive_handler = Dict['keepalive_handler']
-		keepalive_handler.close_all()
-		Log('all keepalive_handler closed')
-	except:
-		Log('keepalive_handler not set')					
-	
+		
 ####################################################################################################
 def ValidatePrefs():	
 	# Dict['Favourites'] = []						# Test: Favs löschen
