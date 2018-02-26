@@ -6,7 +6,7 @@ Download last version: https://github.com/rols1/Shoutcast2017/releases
 
 #### Rückmeldungen willkommen / Feedeback welcome: https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 EMail: rols1@gmx.de 
-  
+   git commit -m 'Änderungen / Korrekturen siehe HISTORY'
 #### Functions (tested on Linux and Windows, Player: Web Player, OpenPHT, Plex Media Player)
 
 INSTALLATION:
@@ -21,12 +21,17 @@ INSTALLATION:
 * Search:  "for Stations", "Now Playing"
 * Listing:  "By Genre", "Top 500 Stations"
 * Settings for bitrate and sorting
+* Radionomy addon
 * Favourites-Option (only local)
 * Updater-Modul
 
 Pictures:
 ===================  
-![img](https://us.v-cdn.net/6025034/uploads/editor/dd/lt6wk7ra1yj0.png)
+Main menu - favourites and  Radionomy addon activated
+![img](https://github.com/rols1/PluginPictures/blob/master/Shoutcast/MainMenu_Radionomy.png)
 
+PHT - favourites and  Radionomy addon deactivated
 ![img](https://us.v-cdn.net/6025034/uploads/editor/x0/hrbu2qjz5btg.png)
 
+Radionomy addon - Main menu
+![img](https://github.com/rols1/PluginPictures/blob/master/Shoutcast/MainMenu_Radionomy.png)
