@@ -1,16 +1,28 @@
 import sys	
 import htmllib		# unescape_html
 import urllib		# urllib.unquote
-		
+import urllib2
+import ssl			# HTTPS-Handshake
+import re	
+
+import cookielib	# für Radionomy
+# keepalive - Quelle: https://github.com/wikier/keepalive, als 3rd party 
+#	Python module in ../Contents/Libraries/Shared (Thanks, mikedm139 in forum:
+#	https://forums.plex.tv/discussion/comment/296468/#Comment_296468
+import keepalive	# für Radionomy 
+from keepalive import HTTPHandler
+import random		# Radionomy: random-ID's für Dict['openerID']
+
+						
 import updater
-from urlparse import urlparse 
-# weitere Module in getStreamMeta
+from urlparse import urlparse 	# StationCheck, getStreamMeta
+
 
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 # Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.2.7'		
-VDATE = '22.02.2018'
+VERSION =  '0.3.0'		
+VDATE = '26.02.2018'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -48,6 +60,28 @@ def Start():
 	DirectoryObject.art = R(ART)
 	DirectoryObject.thumb = R(ICON)
 	HTTP.CacheTime = 3600*5
+	
+	global openerStore		# Radionomy
+	openerStore = {}
+	
+	ValidatePrefs()
+	
+	try:												# Radionomy: clear handler, openerID-Instanzen
+		keepalive_handler = Dict['keepalive_handler']
+		keepalive_handler.close_all()
+		Log('all keepalive_handler closed')
+	except:
+		Log('keepalive_handler not set')					
+	
+####################################################################################################
+def ValidatePrefs():	
+	# Dict['Favourites'] = []						# Test: Favs löschen
+	
+	loc = Prefs['RadionomyLang']
+	if loc == None:
+		loc = "EN/English"
+	Dict['loc'] = loc.split('/')[0]
+	Log('loc: ' + loc)
 
 ####################################################################################################
 def CreateDict():
@@ -97,23 +131,16 @@ def MainMenu():
 	
 	Log('min-bitrate: ' + str(Prefs['min-bitrate']))
 	Log('sort-key: ' + str(Prefs['sort-key']))
-	# Dict['Favourites'] = []						# Test: Favs löschen
 	
 	oc = ObjectContainer(no_cache=True)				# no_cache für Favorites
-	
-	loc = Prefs['RadionomyLang']
-	if loc == None:
-		loc = "EN/English"
-	Dict['loc'] = loc.split('/')[0]
-	Log('loc: ' + loc)
-	
+		
 	if Dict['Favourites']:
 		Log('Favourites: ' + str(len(Dict['Favourites'])))
 	# Log(Dict['Favourites'])
 	if Prefs['UseFavourites']:						# Favoriten einbinden
 		if Dict['Favourites']:
 			oc.add(DirectoryObject(key=Callback(FavouritesShow), title="Favourites", thumb=R('favs.png')))
-
+						
 	oc.add(InputDirectoryObject(key=Callback(GetGenre, title="Search for Stations", queryParamName=SC_SEARCH), 
 		title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"),
 		thumb=R(ICON_SEARCH)))
@@ -134,7 +161,8 @@ def MainMenu():
 #-----------------------------	
 
 	oc = SearchUpdate(title=NAME, start='true', oc=oc)	# Updater-Modul einbinden
-						
+	
+	ValidatePrefs()				
 	return oc
 	
 ####################################################################################################
@@ -164,7 +192,7 @@ def MainMenuRadionomy(title):
 
 		# Log(title); Log(url)
 		if "featured" in genre:												# ohne Subgenres (2 am Anfang)
-			oc.add(DirectoryObject(key=Callback(RD_Genre, url=url, title=title),
+			oc.add(DirectoryObject(key=Callback(RD_Genre, url=url, title=title, browse='no'),
 				title=title, thumb=R('icon-folder.png')))			
 		else:																# mit Subgenres 
 			oc.add(DirectoryObject(key=Callback(RD_SubGenres, url=url, title=title),
@@ -172,7 +200,8 @@ def MainMenuRadionomy(title):
 
 	oc.add(InputDirectoryObject(key=Callback(RD_Search, title="Search Radionomy",), 
 		title=L("Search for Stations by Keyword..."), prompt=L("Search for Stations"), thumb=R(ICON_SEARCH)))
-	
+		
+	ValidatePrefs()
 	return oc
 ####################################################################################################
 @route(PREFIX + '/genres')
@@ -559,12 +588,8 @@ def FavouritesShow():
 #		
 def getStreamMeta(address):
 	Log('getStreamMeta: ' + address)
-	import httplib
 	# import httplib2 as http	# hier nicht genutzt
 	# import pprint				# hier nicht genutzt
-	import re					
-	import urllib2			
-	import ssl				# HTTPS-Handshake
 				
 	shoutcast = False
 	status = 0
@@ -788,7 +813,7 @@ def RD_Search(title, query):
 	return oc
 
 #---------------------------------------------------	
-@route(PREFIX + '/RD_SubGenres')
+@route(PREFIX + '/RD_SubGenres')				# Subgenres für ein genre
 def RD_SubGenres(url, title):
 	Log('RD_SubGenres')
 	oc = ObjectContainer(title2=title)
@@ -803,6 +828,7 @@ def RD_SubGenres(url, title):
 		msg='Nothing found for >%s<: ' % title 
 		return ObjectContainer(header=L('Error'), message=msg)			
 	
+	i=0									# Index-Zähler für 'Mehr' (0,1 = ohne weitere Sätze)
 	for genre in genres:
 		url 	= stringextract('href="', '"', genre)
 		url		= 'https://www.radionomy.com' + url
@@ -810,25 +836,79 @@ def RD_SubGenres(url, title):
 		title	= unescape_html(title)
 		title	= title.decode('utf-8')
 		# Log(url); Log(img); Log(title);
-		oc.add(DirectoryObject(key=Callback(RD_Genre, url=url, title=title),
+		oc.add(DirectoryObject(key=Callback(RD_Genre, url=url, title=title, browse='yes'),
 			title=title, thumb=R('icon-folder.png')))			
-	
+		i=i+1
 	return oc
 #---------------------------------------------------	
-@route(PREFIX + '/RD_Genre')
-def RD_Genre(url, title, offset=0):
-	Log('RD_Genre'); Log(str(offset))
+@route(PREFIX + '/RD_Genre')					# Stationen eines Subgenres
+# www.radionomy.com gibt http-error 302 und einen Redirect auf sich selbst zurück, 
+#	 falls keine cookies gesetzt werden.
+# Zugriff klappt mit urllib2 nur mit  cookie handler (HTTPCookieProcessor)
+# Browsing:
+# 	Browsing nicht via URL verfügbar, sondern via HTTP-POST-request.
+#	Das Offenhalten der Verbindung wird mit dem keepalive-Modul realisiert
+#	(s. Pluginkopf).
+#	Für Multi Sessions speichern wir das OpenerDirector-Objekt in der
+#	globalen Variablen openerStore[openerID]. Dict ist nicht geeignet:
+#	TypeError: can't pickle lock objects (pickle.py, copy_reg.py).
+#
+# 1. Request: ohne Post + data lädt Startseite des SubGenre
+# 2. Request: mit Post und data (scrollOffset=0) lädt erstes Nachlade-Segment
+
+def RD_Genre(url, title, browse, offset=None, openerID=None):
+	Log('RD_Genre'); Log(url); Log(browse); Log(str(offset)); Log(openerID)
+	client_platform = str(Client.Platform)	# Client.Platform: None möglich
+	Log('Client-Platform: ' + client_platform)							
 	url_org = url					# sichern für More
-	oc = ObjectContainer(title2=title)
+	oc = ObjectContainer(title2=title.decode('utf-8'))
 	oc.add(DirectoryObject(key=Callback(MainMenuRadionomy,title='Radionomy'),title='Home', 
 		summary='Home',thumb=R('home_radionomy.png')))
-		
-	page = HTTP.Request(url).content	
-	Log(len(page))
 	
+	if 	offset == None:						# 1. Seite laden (ohne POST + data)
+		plot = str(offset)
+		cookies = cookielib.LWPCookieJar()		
+
+		ctx = ssl.create_default_context()	# funktioniert in PMS nicht ohne SSL + context
+		ctx.check_hostname = False
+		ctx.verify_mode = ssl.CERT_NONE
+		keepalive_handler = HTTPHandler()
+		opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookies), urllib2.HTTPSHandler(context=ctx, debuglevel=1))
+		Log(opener)
+		opener.addheaders.append(('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8'))
+		opener.addheaders.append(('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'))
+		opener.addheaders.append(('X-Requested-With', 'XMLHttpRequest'))		# erforderlich (ohne: Ausgabe der gesamten Seite)
+		try:
+			res = opener.open(url)
+			page = res.read()			
+		except Exception as exception:
+			page = ''
+			Log(str(exception))
+			
+		if browse == 'yes':					# für Folgeseiten: opener speichern
+			openerID = 'openerID|' + serial_random()
+			openerStore[openerID] = opener	# Session global speichern
+			Log('openerID neu:' + openerID)
+	else:									# Folgeseite laden
+											# wir starten mit 0 für das 1. Nachlade-Segment
+		data = {"scrollOffset": offset}		# Post-data zum Scrolling Offset	
+		data = urllib.urlencode(data)
+		Log(data)
+		try:
+			Log('openerID offset  %s: %s' % (offset, openerID))
+			opener = openerStore[openerID]	# Session holen
+			Log(opener)
+			res = opener.open(url, data)
+			page = res.read()
+			# Log(page[:200])
+		except Exception as exception:
+			page = ''
+			Log(str(exception))
+							
+	Log(len(page))	
 	records = blockextract('class="browseRadioWrap', page)		# Stationen eines (Sub-)Genre (wie RD_Search)
 	if len(records) == 0:
-		msg='Nothing found for >%s<: ' % title 
+		msg='Nothing (more) found for >%s<: ' % title 
 		return ObjectContainer(header=L('Error'), message=msg)			
 		
 	for rec in records:
@@ -846,10 +926,17 @@ def RD_Genre(url, title, offset=0):
 		oc.add(DirectoryObject(key=Callback(StationCheck, url=url,title=title,summary=title,
 			fmt='mp3',logo=img,home='Radionomy'),title=title, summary=title, thumb=img))
 	
+	if browse == 'no':					# ohne weitere Sätze
+		return oc
+		
 	# todo: More-Button - Post-Request ("scrollOffset=x")
-#	offset = int(offset) + 1
-#	oc.add(DirectoryObject(key=Callback(RD_Genre, url=url_org, title=title,offset=offset),
-#		title='More', thumb=R('more.png')))			
+	if 	offset == None:	
+		offset = 0					# 0 lädt erstes Nachlade-Segment
+	else:
+		offset = int(offset) + 1
+		
+	oc.add(DirectoryObject(key=Callback(RD_Genre, url=url_org, title=title, browse='yes',
+		offset=offset,openerID=openerID), title='More', thumb=R('more.png')))			
 		
 	return oc
 
@@ -988,3 +1075,12 @@ def stringextract(mFirstChar, mSecondChar, mString):  	# extrahiert Zeichenkette
 	#Log(pos1); Log(ind); Log(pos2);  Log(rString); 
 	return rString
 #----------------------------------------------------------------  	
+def serial_random(): # serial-ID's für tunein erzeugen (keine Formatvorgabe bekannt)
+	basis = ['b8cfa75d', '4589', '4fc19', '3a64', '2c2d24dfa1c2'] # 5 Würfelblöcke
+	serial = []
+	for block in basis:
+		new_block = ''.join(random.choice(block) for i in range(len(block)))
+		serial.append(new_block)
+	serial = '-'.join(serial)
+	return serial
+#---------------------------------------------------------------- 

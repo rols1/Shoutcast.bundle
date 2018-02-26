@@ -3,6 +3,10 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
 
+26.02.2018	0.3.0	Radionomy: Dict[openerID]replaced with global var openerStore[openerID] (Dict caused
+			errors triggered by pickle.py, copy_reg.py (TypeError: can't pickle lock objects).
+not on github	0.2.9	Radionomy: Modul keepalive added (required for Browsing) in ../Contents/Libraries/Shared.	
+not on github	0.2.8	ValidatePrefs added - activated in Start, MainMenu and 	MainMenuRadionomy.
 22.02.2018	0.2.7	Radionomy addon: integration in Favourite-functions.
 not on github	0.2.6	Radionomy addon: genres and subgenres added.
 not on github	0.2.5	getStreamMeta: Filter for suspended stations added.	
