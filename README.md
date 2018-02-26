@@ -34,7 +34,7 @@ PHT - favourites and  Radionomy addon deactivated
 ![img](https://us.v-cdn.net/6025034/uploads/editor/x0/hrbu2qjz5btg.png)
 
 Radionomy addon - Main menu
-![img](https://github.com/rols1/PluginPictures/blob/master/Shoutcast/MainMenu_Radionomy.png)
+![img](https://github.com/rols1/PluginPictures/blob/master/Shoutcast/Radionomy_Entry.png)
 
 Shoutcast - station- and favourite button 
 ![img](https://github.com/rols1/PluginPictures/blob/master/Shoutcast/Fav_add.png)
