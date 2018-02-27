@@ -167,11 +167,7 @@ def MainMenuRadionomy(title):
 	# Home to Menü Shoutcast2017			
 	oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
 	path = 'https://www.radionomy.com/%s/style' % Dict['loc'] 
-	
-	if Dict['RD_Style']:		# Cache Leitseite mit den Genres
-		page =  Dict['RD_Style']
-	else:
-		page = HTTP.Request(path).content
+	page = HTTP.Request(path, cacheTime=86400).content						# cacheTime 1 Tag
 		
 	GenreBlock = stringextract('id="browseMainGenre', '</ul>', page)		# Menü Genres
 	genres = blockextract('<li class=', GenreBlock)

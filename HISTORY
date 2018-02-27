@@ -4,6 +4,7 @@ CHANGE HISTORY 	Shoutcast2017
 
 
 27.02.2018	0.3.1	accidently inserted line 31 (picture-link from forum) removed.
+			MainMenuRadionomy: Dict['RD_Style'] replaced with cacheTime-statement in HTTP.Request.
 26.02.2018	0.3.0	Radionomy: Dict[openerID]replaced with global var openerStore[openerID] (Dict caused
 			errors triggered by pickle.py, copy_reg.py (TypeError: can't pickle lock objects).
 not on github	0.2.9	Radionomy: Modul keepalive added (required for Browsing) in ../Contents/Libraries/Shared.	
