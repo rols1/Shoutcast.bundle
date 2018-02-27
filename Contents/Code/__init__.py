@@ -364,11 +364,13 @@ def StationCheck(url, title, summary, fmt, logo, home=''):
 
 	pls_cont = []
 	for line in urls:
+		pls_url = ''
 		if '=http' in line:	
-			url = line.split('=')[1]
+			pls_url = line.split('=')[1]
 		if line.startswith('http'):					# z.B. Radionomy
-			url = line 
-		pls_cont.append(url)
+			pls_url = line
+		if pls_url: 
+			pls_cont.append(pls_url)
 			
 	pls = repl_dop(pls_cont)
 	Log(pls[:100])
