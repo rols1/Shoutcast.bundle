@@ -21,14 +21,14 @@ from urlparse import urlparse 	# StationCheck, getStreamMeta
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 # Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.3.0'		
-VDATE = '26.02.2018'
+VERSION =  '0.3.1'		
+VDATE = '27.02.2018'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
 ICON_OK					= 'icon-ok.png'
 ICON_SEARCH 			= 'suche.png'
-![](https://us.v-cdn.net/6025034/uploads/editor/dd/lt6wk7ra1yj0.png "")
+
 ART    		= 'art-default.jpg'		# Quelle: https://de.wikipedia.org/w/index.php?curid=4483484
 ICON   		= 'icon-default.jpg'	# wie oben, Symbol ohne Schriftzug,  angepasst auf 512x512px
 
