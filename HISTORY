@@ -3,11 +3,12 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
 
+27.09.2018	0.3.4	StationCheck: test p.params replaced with test len(url_split) - like TuneIn2017	
 27.09.2018	0.3.3	StationCheck: wrong url-parameter after urlparse fixed (url -> stream_url)
 			StationCheck:  SHOUTcast Stream Status ('Stream is') removed.
 			getStreamMeta: return-Parameter shoutcast added.
 not on github	0.3.2	RD_Search: urllib2.quote for queries with special characters.
-			Function get_pls added (from TuneIn2017, extract playlists).
+			Function get_pls added (from ., extract playlists).
 			get_pls: check playlist for adresses without http.
 			Function ip_test added (simple IP-test for playlist content)
 27.02.2018	0.3.1	accidently inserted line 31 (picture-link from forum) removed.

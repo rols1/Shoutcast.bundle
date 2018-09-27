@@ -393,16 +393,25 @@ def StationCheck(url, title, summary, fmt, logo, home=''):
 				if stream_url.endswith('.fm/'):			# Bsp. http://mp3.dinamo.fm/ (SHOUTcast-Stream)
 					stream_url = '%s;' % stream_url
 				else:									# ohne Portnummer, ohne Pfad: letzter Test auf Shoutcast-Status 
-					p = urlparse(stream_url)
-					if 	p.params == '':	
-						# 27.09.2018 Verzicht auf "Stream is up"-Test. Falls keine Shoutcast-Seite, würde der
-						#	Stream geladen, was hier zum Timeout führt. Falls erforderlich, hier Test auf 
-						#  	ret.get('shoutcast') voranstellen.
-						#cont = HTTP.Request(stream_url).content# Bsp. Radio Soma -> http://live.radiosoma.com
-						#if 	'<b>Stream is up' in cont:			# 26.09.2018 früheres '.. up at' manchmal zu lang
-						#Log('Shoutcast ohne Portnummer: <b>Stream is up at')
-						stream_url = '%s/;' % stream_url	
+						#p = urlparse(stream_url)				# Test auf url-Parameter nicht verlässlich
+						#if 	p.params == '':	
+						url_split = stream_url.split('/')		
+						Log(len(url_split))
+						if len(url_split) <= 4:			# Bsp. http://station.io, http://sl64.hnux.com/
+							if stream_url.endswith('/'):
+								stream_url = stream_url[:len(stream_url)-1]	# letztes / entfernen 
+							# 27.09.2018 Verzicht auf "Stream is up"-Test. Falls keine Shoutcast-Seite, würde der
+							#	Stream geladen, was hier zum Timeout führt. Falls erforderlich, hier Test auf 
+							#  	ret.get('shoutcast') voranstellen.
+							#cont = HTTP.Request(url).content# Bsp. Radio Soma -> http://live.radiosoma.com
+							#if 	'<b>Stream is up' in cont:			# 26.09.2018 früheres '.. up at' manchmal zu lang
+							#Log('Shoutcast ohne Portnummer: <b>Stream is up at')
+							shoutcast = ret.get('shoutcast')
+							Log(ret.get('shoutcast'))
+							if 'shoutcast' in shoutcast.lower(): # an Shoutcast-url /; anhängen
+								stream_url = '%s/;' % stream_url	
 			
+		Log('stream_url: ' + stream_url)	
 		if summ.startswith('None'):	
 			summ = summ.replace('None', 'song title not found')
 		if summ == '':	
@@ -623,8 +632,8 @@ def FavouritesShow():
 #	getStreamMeta wertet die Header der Stream-Typen und -Services Shoutcast, Icecast / Radionomy, 
 #		Streammachine, tunein aus und ermittelt die Metadaten.
 #		Zusätzlich wird die Url auf eine angehängte Portnummer geprüft.
-# 	Rückgabe 	Bsp. 1. {'status': 1, 'hasPortNumber': 'false', 'shoutcast': false', 'metadata': false, error': error}
-#				Bsp. 2.	{'status': 1, 'hasPortNumber': 'true',  'shoutcast': true', 'error': error, 
+# 	Rückgabe 	Bsp. 1. {'status': 1, 'hasPortNumber': 'false', 'shoutcast': 'false', 'metadata': false, error': error}
+#				Bsp. 2.	{'status': 1, 'hasPortNumber': 'true',  'shoutcast': 'true', 'error': error, 
 #						'metadata': {'contenttype': 'audio/mpeg', 'bitrate': '64', 
 #						'song': 'Nasty Habits 41 - Senza Filtro 2017'}}
 #		
