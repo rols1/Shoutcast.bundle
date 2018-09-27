@@ -21,8 +21,8 @@ from urlparse import urlparse 	# StationCheck, getStreamMeta
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 # Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.3.1'		
-VDATE = '27.02.2018'
+VERSION =  '0.3.3'		
+VDATE = '27.09.2018'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -346,40 +346,18 @@ def StationCheck(url, title, summary, fmt, logo, home=''):
 		else:
 			oc.add(DirectoryObject(key=Callback(MainMenu),title='Home', summary='Home',thumb=R('home.png')))
 	
-	try:
-		content = HTTP.Request(url, cacheTime=0).content	# Playlist im .pls-Format (SC_PLAY)
-	except:
-		Log('HTTP.Request fehlgeschlagen')
-		content=''
-	Log('content:' + content)
-	
-	if content == '':
-		msg='Playlist could not be loaded: ' + title 
-		return ObjectContainer(header=L('Error'), message=msg)			
-	if 'http' not in content:
-		msg='Playlist is empty: ' + title 
-		return ObjectContainer(header=L('Error'), message=msg)			
-		
-	urls =content.splitlines()
-
-	pls_cont = []
-	for line in urls:
-		pls_url = ''
-		if '=http' in line:	
-			pls_url = line.split('=')[1]
-		if line.startswith('http'):					# z.B. Radionomy
-			pls_url = line
-		if pls_url: 
-			pls_cont.append(pls_url)
-			
-	pls = repl_dop(pls_cont)
-	Log(pls[:100])
+	pls = get_pls(url)
+	Log('len pls:' + str (len(pls)))
+	if len(pls) == 0:
+		msg = 'no stream found for >%s<' % title
+		return ObjectContainer(header='Error', message=msg)
 	
 	cnt=0
 	for stream_url in pls:
 		summ=''
 		cnt = cnt + 1		
 		ret = getStreamMeta(stream_url)				# getStreamMeta
+		Log(ret)
 		st = ret.get('status')	
 		Log('ret.get.status: ' + str(st))
 		if st == 0:									# kein Stream, verwerfen
@@ -405,7 +383,7 @@ def StationCheck(url, title, summary, fmt, logo, home=''):
 						summ = '%s | Bitrate: %sKB' % (str(summ_org), bitrate)	# altes summary (i.d.R Song) ergänzen
 					if bitrate == None and song == '':
 						summ = 'song title and bitrate unknown'	
-				
+	
 			if  ret.get('hasPortNumber') == 'true': # auch SHOUTcast ohne Metadaten möglich, Bsp. Holland FM Gran Canaria,
 				if stream_url.endswith('/'):				#	http://stream01.streamhier.nl:9010
 					stream_url = '%s;' % stream_url
@@ -414,13 +392,16 @@ def StationCheck(url, title, summary, fmt, logo, home=''):
 			else:	
 				if stream_url.endswith('.fm/'):			# Bsp. http://mp3.dinamo.fm/ (SHOUTcast-Stream)
 					stream_url = '%s;' % stream_url
-				else:								# ohne Portnummer, ohne Pfad: letzter Test auf Shoutcast-Status 
-					p = urlparse(url)
-					if p.path == '':
-						cont = HTTP.Request(url).content# Bsp. Radio Soma -> http://live.radiosoma.com
-						if 	'<b>Stream is up at' in cont:
-							Log('Shoutcast ohne Portnummer: <b>Stream is up at')
-							url = '%s/;' % url	
+				else:									# ohne Portnummer, ohne Pfad: letzter Test auf Shoutcast-Status 
+					p = urlparse(stream_url)
+					if 	p.params == '':	
+						# 27.09.2018 Verzicht auf "Stream is up"-Test. Falls keine Shoutcast-Seite, würde der
+						#	Stream geladen, was hier zum Timeout führt. Falls erforderlich, hier Test auf 
+						#  	ret.get('shoutcast') voranstellen.
+						#cont = HTTP.Request(stream_url).content# Bsp. Radio Soma -> http://live.radiosoma.com
+						#if 	'<b>Stream is up' in cont:			# 26.09.2018 früheres '.. up at' manchmal zu lang
+						#Log('Shoutcast ohne Portnummer: <b>Stream is up at')
+						stream_url = '%s/;' % stream_url	
 			
 		if summ.startswith('None'):	
 			summ = summ.replace('None', 'song title not found')
@@ -461,6 +442,76 @@ def StationCheck(url, title, summary, fmt, logo, home=''):
 		
 	return oc
 
+#-----------------------------
+def get_pls(url):               # Playlist extrahieren
+	Log('get_pls: ' + url)
+	
+	# erlaubte Playlist-Formate - Endungen oder Fragmente der Url:
+	#	Bsp. http://www.asfradio.com/launch.asp?p=pls
+	format_list = ['.pls', '.m3u', '=pls', '=m3u', '=ram', '=asx']
+	
+	urls =url.splitlines()	# mehrere möglich, auch SHOUTcast- und m3u-Links, Bsp. http://64.150.176.192:8043/
+
+	pls_cont = []
+	for url in urls:
+		# Log(url)
+		cont = url.strip()
+		if url.startswith('http') == False:		# Sicherung, falls Zeile keine Url enthält (bisher aber nicht gesehen)
+			continue
+		isInFormatList = False	
+		for pat in format_list:				# Url mit Playlists
+			if pat in url:	
+				isInFormatList = True		
+				break
+													# 1. Versuch (2-step)
+		if 	isInFormatList:	# .pls auch im Pfad möglich, Bsp. AFN: ../AFNE_WBN.pls?DIST=TuneIn&TGT=..
+			try:
+				cont = HTTP.Request(url).content
+			except Exception as exception:
+				Log(str(exception))
+				cont = ''	
+		cont = cont.strip()
+		Log(isInFormatList)
+		Log('cont1: ' + cont)
+												
+		if cont:									# Streamlinks aus Playlist extrahieren 
+			lines =cont.splitlines()	
+			for line in lines:						# Bsp. [playlist] NumberOfEntries=1 File1=http://s8.pop-stream.de:8650/
+				line = line.strip()
+				if '.pls' in line:					# Bsp. http://server.huthbroadcasting.com:8000/listen.pls?sid=7
+					pls_in_pls = get_pls(line)
+					Log('pls_in_pls: ' + str(pls_in_pls))
+					if pls_in_pls:
+						pls_cont = pls_in_pls
+						break
+				if line.startswith('http'):			# 
+					pls_cont.append(line)
+				else:								# Adresse ohne http?
+					if 	ip_test(line):				# Bsp. TheBearCave Radio 216.137.195.164:8000
+						pls_cont.append('http://' + line)				
+				if '=http' in line:					# Bsp. File1=http://195.150.20.9:8000/..
+					line_url = line.split('=')[1]
+					pls_cont.append(line_url)						
+		 			 	 		   
+	pls = pls_cont
+	if len(pls) == 0:
+		Log('pls leer')
+		return pls
+	lines = repl_dop(pls)
+	# pls = '\n'.join(lines) # in Tunein2017 Rückgabe als String
+	# pls = pls.strip()
+	pls = lines
+	Log('return get_pls: ' + str(pls))
+	return pls
+#-------------------------------------	
+def ip_test(ip):			# einfacher IP-Test, nur IP4, ohne socket-Test socket.inet_aton(addr)
+	ip = ip.split(':')[0]	# ev. Port abschneiden
+	re_ip = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+	if re_ip.match(ip):
+		Log('ip_test: True')
+		return True
+	return False
+	
 ####################################################################################################
 @route(PREFIX + '/CreateTrackObject')
 def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False, **kwargs):
@@ -567,13 +618,13 @@ def FavouritesShow():
 ####################################################################################################
 # getStreamMeta ist Teil von streamscrobbler-python (https://github.com/dirble/streamscrobbler-python),
 #	angepasst für dieses Plugin (Wandlung Objekte -> Funktionen, Prüfung Portnummer, Rückgabe Error-Wert).
-#	Originalfunktiom: getAllData(self, address).
+#	Originalfunktion: getAllData(self, address).
 #	
 #	getStreamMeta wertet die Header der Stream-Typen und -Services Shoutcast, Icecast / Radionomy, 
 #		Streammachine, tunein aus und ermittelt die Metadaten.
 #		Zusätzlich wird die Url auf eine angehängte Portnummer geprüft.
-# 	Rückgabe 	Bsp. 1. {'status': 1, 'hasPortNumber': 'false', 'metadata': False, 'error': error}
-#				Bsp. 2.	{'status': 1, 'hasPortNumber': 'true', 'error': error, 
+# 	Rückgabe 	Bsp. 1. {'status': 1, 'hasPortNumber': 'false', 'shoutcast': false', 'metadata': false, error': error}
+#				Bsp. 2.	{'status': 1, 'hasPortNumber': 'true',  'shoutcast': true', 'error': error, 
 #						'metadata': {'contenttype': 'audio/mpeg', 'bitrate': '64', 
 #						'song': 'Nasty Habits 41 - Senza Filtro 2017'}}
 #		
@@ -644,28 +695,28 @@ def getStreamMeta(address):
 			Log(content)
 			if 'station is suspended' in content:
 				Log('station is suspended')
-				return {"status": 0, "metadata": None, "hasPortNumber": True, "error": content}
+				return {"status": 0, "metadata": None, "hasPortNumber": hasPortNumber, "shoutcast": shoutcast, "error": content}
 		except:
 			pass
 					
 		response.close()
 		error=''
-		return {"status": status, "metadata": metadata, "hasPortNumber": hasPortNumber, "error": error}
+		return {"status": status, "metadata": metadata, "hasPortNumber": hasPortNumber, "shoutcast": shoutcast, "error": error}
 
 	except urllib2.HTTPError, e:	
 		error='Error, HTTPError = ' + str(e.code)
 		Log(error)
-		return {"status": status, "metadata": None, "hasPortNumber": hasPortNumber, "error": error}
+		return {"status": status, "metadata": None, "hasPortNumber": hasPortNumber, "shoutcast": shoutcast, "error": error}
 
 	except urllib2.URLError, e:						# Bsp. RANA FM 88.5 http://216.221.73.213:8000
 		error='Error, URLError: ' + str(e.reason)
 		Log(error)
-		return {"status": status, "metadata": None, "hasPortNumber": hasPortNumber, "error": error}
+		return {"status": status, "metadata": None, "hasPortNumber": hasPortNumber, "shoutcast": shoutcast, "error": error}
 
 	except Exception, err:
 		error='Error: ' + str(err)
 		Log(error)
-		return {"status": status, "metadata": None, "hasPortNumber": hasPortNumber, "error": error}
+		return {"status": status, "metadata": None, "hasPortNumber": hasPortNumber, "shoutcast": shoutcast, "error": error}
 #----------------------------------------------------------------  
 #	Hilfsfunktionen für getStreamMeta
 #----------------------------------------------------------------  
@@ -775,6 +826,8 @@ def shoutcastCheck(response, headers, itsOld):
 @route(PREFIX + '/RD_Search')
 def RD_Search(title, query):		
 	Log('RD_Search')
+	query =  query.replace(' ', '+')
+	# query = urllib2.quote(query, "utf-8")	# für queries mit Sonderzeichen				
 	Log(query);
 	oc = ObjectContainer(title2=title)
 	oc.add(DirectoryObject(key=Callback(MainMenuRadionomy,title='Radionomy'),title='Home', 
@@ -949,7 +1002,7 @@ def SearchUpdate(title, start, oc=None):
 							
 			if 	available == 'true':					# Update präsentieren
 				return oc
-														# Menü Plugin-Update zeigen														
+		Log('build Update menu')						# Menü Plugin-Update zeigen														
 		title = 'Plugin-Update | Version: ' + VERSION + ' - ' + VDATE 	 
 		summary=L('Start searching for new Updates')
 		tagline=L('source of supply') + ': ' + REPO_URL			
@@ -961,7 +1014,7 @@ def SearchUpdate(title, start, oc=None):
 		oc = ObjectContainer(title2=title)	
 		oc,available = presentUpdate(oc,start)
 		if available == 'no_connect':
-			msgH = L('Fehler'); 
+			msgH = L('Error'); 
 			msg = L('Github is not available') 		
 			return ObjectContainer(header=msgH, message=msg)
 		else:
