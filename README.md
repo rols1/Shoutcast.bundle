@@ -6,7 +6,7 @@ Download last version: https://github.com/rols1/Shoutcast2017/releases
 
 #### Rückmeldungen willkommen / Feedeback welcome: https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 EMail: rols1@gmx.de 
-   git commit -m 'Änderungen / Korrekturen siehe HISTORY'
+
 #### Tested on Linux and Windows, Player: Web Player, OpenPHT, Plex Media Player
 
 INSTALLATION:
