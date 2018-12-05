@@ -3,6 +3,8 @@ CHANGE HISTORY 	Shoutcast2017
 --------------	Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
 
+05.12.2018	0.3.5	CreateTrackObject: **kwargs removed (previously used for unexpected arguments, now causing
+			errors).
 27.09.2018	0.3.4	StationCheck: test p.params replaced with test len(url_split) - like TuneIn2017	
 27.09.2018	0.3.3	StationCheck: wrong url-parameter after urlparse fixed (url -> stream_url)
 			StationCheck:  SHOUTcast Stream Status ('Stream is') removed.

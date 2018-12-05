@@ -21,8 +21,8 @@ from urlparse import urlparse 	# StationCheck, getStreamMeta
 # +++++ Shoutcast2017 - shoutcast.com-Plugin für den Plex Media Server +++++
 # Forum:		https://forums.plex.tv/discussion/296423/rel-shoutcast2017
 
-VERSION =  '0.3.3'		
-VDATE = '27.09.2018'
+VERSION =  '0.3.4'		
+VDATE = '05.12.2018'
 
 ICON_MAIN_UPDATER 		= 'plugin-update.png'		
 ICON_UPDATER_NEW 		= 'plugin-update-new.png'
@@ -523,7 +523,9 @@ def ip_test(ip):			# einfacher IP-Test, nur IP4, ohne socket-Test socket.inet_at
 	
 ####################################################################################################
 @route(PREFIX + '/CreateTrackObject')
-def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False, **kwargs):
+# 05.12.2018 **kwargs removed (previously used for unexpected arguments, now causing errors: 
+#	..unexpected error during playback..
+def CreateTrackObject(url, title, summary, fmt, thumb, include_container=False):
 	Log('CreateTrackObject')
 	Log(url);Log(title);Log(summary);Log(fmt);Log(thumb);
 
