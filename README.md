@@ -9,6 +9,9 @@ EMail: rols1@gmx.de
 
 #### Tested on Linux and Windows, Player: Web Player, OpenPHT, Plex Media Player
 
+#### 29.05.2019 Plex has removed (since server-Version 1.15.6.1079) support for Plugins also in the Webclient. If you want to use an older solution (still works), please take a look here: https://forums.plex.tv/discussion/comment/1457027/#Comment_1457027
+
+
 INSTALLATION:
 ===================  
 * via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle) or manually follow the directions below.
