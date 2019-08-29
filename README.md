@@ -1,5 +1,8 @@
 Shoutcast2017
 ==================
+
+#### 29.08.2019 Plex has phased out plugins in clients - so I stopped  support for this plugin.
+
 shoutcast.com-Plugin for Plex Media Server
 
 Download last version: https://github.com/rols1/Shoutcast2017/releases
